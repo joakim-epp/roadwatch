@@ -2,8 +2,8 @@ import os
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from .database import get_db
 from .models import User
@@ -12,16 +12,15 @@ SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_MINUTES = 60 * 24 * 30  # 30 days
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer = HTTPBearer()
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
 def create_token(user_id: int) -> str:
