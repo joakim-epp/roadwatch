@@ -50,6 +50,7 @@ class MarkerCreate(BaseModel):
     title: str
     description: str = ""
     severity: str = "medium"
+    address: str = ""
 
 
 class MarkerUpdate(BaseModel):
@@ -57,6 +58,7 @@ class MarkerUpdate(BaseModel):
     description: Optional[str] = None
     severity: Optional[str] = None
     status: Optional[str] = None
+    address: Optional[str] = None
 
 
 class CommentCreate(BaseModel):
@@ -100,11 +102,13 @@ def create_marker(
     if body.severity not in VALID_SEVERITIES:
         raise HTTPException(status_code=400, detail="Ogiltig allvarlighetsgrad")
     m = Marker(**body.model_dump(), created_by=user.id)
+    m.address = body.address.strip() or None
     db.add(m)
     db.commit()
     db.refresh(m)
     background_tasks.add_task(send_new_marker_email, m.title, user.username)
-    background_tasks.add_task(geocode_marker, m.id, m.lat, m.lng)
+    if not m.address:
+        background_tasks.add_task(geocode_marker, m.id, m.lat, m.lng)
     return marker_dict(m)
 
 

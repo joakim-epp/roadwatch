@@ -295,6 +295,10 @@
       <option value="high">Hög — farlig</option>
     </select>
   </div>
+  <div class="form-group">
+    <label>Plats <span style="color:#475569;font-weight:400">(valfritt)</span></label>
+    <input id="add-address" type="text" placeholder="t.ex. Vid grinden, norra änden">
+  </div>
   <div style="display:flex;gap:.5rem;margin-top:.25rem">
     <button class="btn secondary" onclick="cancelAdd()" style="flex:1">Avbryt</button>
     <button class="btn" onclick="submitAdd()" style="flex:2">Lägg till</button>
@@ -552,6 +556,7 @@
     document.getElementById('add-title').value = '';
     document.getElementById('add-desc').value = '';
     document.getElementById('add-severity').value = 'medium';
+    document.getElementById('add-address').value = '';
     document.getElementById('add-modal').classList.add('open');
   }
 
@@ -569,6 +574,7 @@
         lat: state.pendingLatLng.lat, lng: state.pendingLatLng.lng, title,
         description: document.getElementById('add-desc').value.trim(),
         severity: document.getElementById('add-severity').value,
+        address: document.getElementById('add-address').value.trim(),
       });
       state.markers.push(m);
       renderMarkers();
@@ -688,6 +694,10 @@
           <option value="high" ${m.severity==='high'?'selected':''}>Hög — farlig</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>Plats <span style="color:#475569;font-weight:400">(valfritt)</span></label>
+        <input id="edit-address" type="text" value="${(m.address||'').replace(/"/g,'&quot;')}" placeholder="t.ex. Vid grinden, norra änden">
+      </div>
       <div style="display:flex;gap:.5rem;margin-top:.25rem">
         <button class="btn secondary" onclick="exitEditMode()" style="flex:1">Avbryt</button>
         <button class="btn" onclick="saveEdit()" style="flex:2">Spara</button>
@@ -705,6 +715,7 @@
         title,
         description: document.getElementById('edit-desc').value.trim(),
         severity: document.getElementById('edit-severity').value,
+        address: document.getElementById('edit-address').value.trim() || null,
       });
       const idx = state.markers.findIndex(x => x.id === state.selectedId);
       state.markers[idx] = updated;
