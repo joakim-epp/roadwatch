@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Roadwatch</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #f1f5f9; height: 100dvh; overflow: hidden; }
+
+    /* ── Auth ── */
+    #auth {
+      display: flex; align-items: center; justify-content: center;
+      height: 100dvh; padding: 1rem;
+    }
+    .auth-card {
+      background: #1e293b; border-radius: 1rem; padding: 2rem;
+      width: 100%; max-width: 380px; box-shadow: 0 25px 50px rgba(0,0,0,.5);
+    }
+    .auth-card h1 { font-size: 1.5rem; margin-bottom: .25rem; }
+    .auth-card p { color: #94a3b8; font-size: .875rem; margin-bottom: 1.5rem; }
+    .tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
+    .tab {
+      flex: 1; padding: .5rem; border: none; border-radius: .5rem;
+      cursor: pointer; font-size: .875rem; font-weight: 500; transition: .15s;
+    }
+    .tab.active { background: #3b82f6; color: #fff; }
+    .tab:not(.active) { background: #334155; color: #94a3b8; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: .75rem; color: #94a3b8; margin-bottom: .375rem; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+    input, select, textarea {
+      width: 100%; padding: .625rem .75rem; background: #0f172a; border: 1px solid #334155;
+      border-radius: .5rem; color: #f1f5f9; font-size: .9375rem; outline: none; transition: border-color .15s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #3b82f6; }
+    textarea { resize: vertical; min-height: 80px; }
+    .btn {
+      width: 100%; padding: .75rem; background: #3b82f6; color: #fff; border: none;
+      border-radius: .5rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: .15s;
+    }
+    .btn:hover { background: #2563eb; }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn.danger { background: #ef4444; }
+    .btn.danger:hover { background: #dc2626; }
+    .btn.secondary { background: #334155; }
+    .btn.secondary:hover { background: #475569; }
+    .error-msg { color: #f87171; font-size: .8125rem; margin-top: .75rem; text-align: center; }
+
+    /* ── App layout ── */
+    #app { display: none; flex-direction: column; height: 100dvh; }
+    #app.visible { display: flex; }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .625rem 1rem; background: #1e293b; border-bottom: 1px solid #334155;
+      z-index: 1000; flex-shrink: 0;
+    }
+    header h1 { font-size: 1.125rem; font-weight: 700; }
+    .header-right { display: flex; align-items: center; gap: .75rem; }
+    .username { font-size: .8125rem; color: #94a3b8; }
+    .icon-btn {
+      background: none; border: none; cursor: pointer; color: #94a3b8;
+      padding: .25rem; display: flex; align-items: center; font-size: 1.25rem;
+    }
+    .icon-btn:hover { color: #f1f5f9; }
+
+    #map { flex: 1; }
+
+    /* ── FAB ── */
+    #fab {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1000;
+      width: 56px; height: 56px; background: #3b82f6; color: #fff;
+      border: none; border-radius: 50%; font-size: 1.75rem; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(59,130,246,.5); display: flex; align-items: center; justify-content: center;
+      transition: .15s;
+    }
+    #fab:hover { background: #2563eb; transform: scale(1.05); }
+    #fab.active { background: #ef4444; box-shadow: 0 4px 14px rgba(239,68,68,.5); }
+
+    /* ── Panel (marker detail) ── */
+    #panel {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000;
+      background: #1e293b; border-radius: 1rem 1rem 0 0;
+      box-shadow: 0 -8px 32px rgba(0,0,0,.4);
+      max-height: 80dvh; display: flex; flex-direction: column;
+      transform: translateY(100%); transition: transform .25s ease;
+    }
+    #panel.open { transform: translateY(0); }
+
+    .panel-handle { width: 40px; height: 4px; background: #475569; border-radius: 2px; margin: .75rem auto .25rem; }
+    .panel-header { display: flex; align-items: flex-start; justify-content: space-between; padding: .5rem 1rem 0; gap: .5rem; }
+    .panel-title { font-size: 1.125rem; font-weight: 600; flex: 1; }
+    .panel-close { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; line-height: 1; padding: 0; }
+    .panel-body { overflow-y: auto; padding: .75rem 1rem 2rem; flex: 1; }
+
+    .badges { display: flex; gap: .5rem; margin-bottom: .75rem; flex-wrap: wrap; }
+    .badge {
+      padding: .25rem .625rem; border-radius: 999px; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+    }
+    .badge.low { background: #14532d; color: #86efac; }
+    .badge.medium { background: #7c2d12; color: #fdba74; }
+    .badge.high { background: #7f1d1d; color: #fca5a5; }
+    .badge.unfilled { background: #1e3a5f; color: #93c5fd; }
+    .badge.filled { background: #1a2e1a; color: #86efac; }
+
+    .panel-desc { color: #cbd5e1; font-size: .9375rem; line-height: 1.5; margin-bottom: .75rem; }
+    .panel-meta { font-size: .8125rem; color: #64748b; margin-bottom: 1rem; }
+
+    .photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: .5rem; margin-bottom: 1rem; }
+    .photo-thumb {
+      aspect-ratio: 1; object-fit: cover; border-radius: .5rem; cursor: pointer;
+      width: 100%; background: #0f172a;
+    }
+    .photo-wrap { position: relative; }
+    .photo-delete {
+      position: absolute; top: .25rem; right: .25rem; background: rgba(0,0,0,.7);
+      border: none; color: #fff; border-radius: 50%; width: 22px; height: 22px;
+      font-size: .75rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+
+    .upload-btn-wrap { margin-bottom: 1rem; }
+    .upload-btn-wrap input[type=file] { display: none; }
+    .upload-label {
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      padding: .625rem; border: 1.5px dashed #475569; border-radius: .5rem;
+      cursor: pointer; color: #94a3b8; font-size: .875rem; transition: .15s;
+    }
+    .upload-label:hover { border-color: #3b82f6; color: #3b82f6; }
+
+    .panel-actions { display: flex; gap: .5rem; margin-top: .5rem; }
+    .panel-actions .btn { width: auto; flex: 1; padding: .5rem; font-size: .875rem; }
+
+    /* ── Add marker modal ── */
+    #add-modal {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 3000;
+      background: #1e293b; border-radius: 1rem 1rem 0 0;
+      box-shadow: 0 -8px 32px rgba(0,0,0,.4);
+      transform: translateY(100%); transition: transform .25s ease;
+      padding: 0 1rem 2rem;
+    }
+    #add-modal.open { transform: translateY(0); }
+    #add-modal h2 { font-size: 1rem; font-weight: 600; padding: 1rem 0 .75rem; }
+
+    /* ── Lightbox ── */
+    #lightbox {
+      display: none; position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,.95); align-items: center; justify-content: center;
+    }
+    #lightbox.open { display: flex; }
+    #lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    #lightbox-close {
+      position: absolute; top: 1rem; right: 1rem; background: none; border: none;
+      color: #fff; font-size: 2rem; cursor: pointer;
+    }
+
+    /* ── Marker icons ── */
+    .marker-pin {
+      width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+      border: 2px solid rgba(0,0,0,.3); box-shadow: 0 2px 6px rgba(0,0,0,.4);
+    }
+    .marker-pin.low { background: #22c55e; }
+    .marker-pin.medium { background: #f97316; }
+    .marker-pin.high { background: #ef4444; }
+    .marker-pin.filled { opacity: .45; }
+  </style>
+</head>
+<body>
+
+<!-- Auth -->
+<div id="auth">
+  <div class="auth-card">
+    <h1>🛣️ Roadwatch</h1>
+    <p>Track potholes on your road</p>
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('login')">Login</button>
+      <button class="tab" onclick="showTab('register')">Register</button>
+    </div>
+
+    <div id="login-form">
+      <div class="form-group">
+        <label>Username</label>
+        <input id="login-username" type="text" autocomplete="username" placeholder="your username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button class="btn" onclick="doLogin()">Login</button>
+    </div>
+
+    <div id="register-form" style="display:none">
+      <div class="form-group">
+        <label>Username</label>
+        <input id="reg-username" type="text" autocomplete="username" placeholder="choose a username">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input id="reg-email" type="email" autocomplete="email" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input id="reg-password" type="password" autocomplete="new-password" placeholder="••••••••">
+      </div>
+      <button class="btn" onclick="doRegister()">Create account</button>
+    </div>
+
+    <div id="auth-error" class="error-msg"></div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <header>
+    <h1>🛣️ Roadwatch</h1>
+    <div class="header-right">
+      <span class="username" id="header-username"></span>
+      <button class="icon-btn" onclick="doLogout()" title="Logout">⏏</button>
+    </div>
+  </header>
+  <div id="map"></div>
+  <button id="fab" onclick="toggleAddMode()" title="Add pothole">＋</button>
+</div>
+
+<!-- Marker detail panel -->
+<div id="panel">
+  <div class="panel-handle"></div>
+  <div class="panel-header">
+    <span class="panel-title" id="panel-title"></span>
+    <button class="panel-close" onclick="closePanel()">×</button>
+  </div>
+  <div class="panel-body">
+    <div class="badges" id="panel-badges"></div>
+    <p class="panel-desc" id="panel-desc"></p>
+    <p class="panel-meta" id="panel-meta"></p>
+    <div class="photos-grid" id="panel-photos"></div>
+    <div class="upload-btn-wrap">
+      <label class="upload-label" for="photo-input">📷 Add photo</label>
+      <input id="photo-input" type="file" accept="image/*" onchange="uploadPhoto(event)">
+    </div>
+    <div class="panel-actions" id="panel-actions"></div>
+  </div>
+</div>
+
+<!-- Add marker modal -->
+<div id="add-modal">
+  <h2>📍 New pothole</h2>
+  <div class="form-group">
+    <label>Title</label>
+    <input id="add-title" type="text" placeholder="e.g. Large pothole near gate">
+  </div>
+  <div class="form-group">
+    <label>Description</label>
+    <textarea id="add-desc" placeholder="Any additional details..."></textarea>
+  </div>
+  <div class="form-group">
+    <label>Severity</label>
+    <select id="add-severity">
+      <option value="low">Low — minor bump</option>
+      <option value="medium" selected>Medium — noticeable</option>
+      <option value="high">High — dangerous</option>
+    </select>
+  </div>
+  <div style="display:flex;gap:.5rem;margin-top:.25rem">
+    <button class="btn secondary" onclick="cancelAdd()" style="flex:1">Cancel</button>
+    <button class="btn" onclick="submitAdd()" style="flex:2">Add marker</button>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <button id="lightbox-close" onclick="closeLightbox()">×</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // ── State ──────────────────────────────────────────────────────────────
+  let state = {
+    token: localStorage.getItem('rw_token'),
+    user: JSON.parse(localStorage.getItem('rw_user') || 'null'),
+    markers: [],
+    addMode: false,
+    pendingLatLng: null,
+    selectedId: null,
+  };
+
+  let map, layerGroup;
+
+  // ── API helpers ────────────────────────────────────────────────────────
+  async function api(method, path, body) {
+    const opts = {
+      method,
+      headers: { 'Content-Type': 'application/json', ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}) },
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(path, opts);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Request failed' }));
+      throw new Error(err.detail || 'Request failed');
+    }
+    return res.json();
+  }
+
+  async function apiUpload(path, formData) {
+    const res = await fetch(path, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${state.token}` },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Upload failed' }));
+      throw new Error(err.detail || 'Upload failed');
+    }
+    return res.json();
+  }
+
+  // ── Auth ───────────────────────────────────────────────────────────────
+  function showTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === (tab === 'login' ? 0 : 1)));
+    document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
+    document.getElementById('register-form').style.display = tab === 'register' ? '' : 'none';
+    document.getElementById('auth-error').textContent = '';
+  }
+
+  async function doLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    try {
+      const data = await api('POST', '/api/users/login', { username, password });
+      saveSession(data);
+    } catch (e) {
+      document.getElementById('auth-error').textContent = e.message;
+    }
+  }
+
+  async function doRegister() {
+    const username = document.getElementById('reg-username').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    try {
+      const data = await api('POST', '/api/users/register', { username, email, password });
+      saveSession(data);
+    } catch (e) {
+      document.getElementById('auth-error').textContent = e.message;
+    }
+  }
+
+  function saveSession(data) {
+    state.token = data.token;
+    state.user = { username: data.username, is_admin: data.is_admin };
+    localStorage.setItem('rw_token', data.token);
+    localStorage.setItem('rw_user', JSON.stringify(state.user));
+    showApp();
+  }
+
+  function doLogout() {
+    state.token = null;
+    state.user = null;
+    localStorage.removeItem('rw_token');
+    localStorage.removeItem('rw_user');
+    location.reload();
+  }
+
+  // ── App init ───────────────────────────────────────────────────────────
+  function showApp() {
+    document.getElementById('auth').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    document.getElementById('header-username').textContent = state.user.username;
+    initMap();
+    loadMarkers();
+  }
+
+  function initMap() {
+    map = L.map('map', { zoomControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+    layerGroup = L.layerGroup().addTo(map);
+
+    // Center on user location, fallback to Sweden
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => map.setView([pos.coords.latitude, pos.coords.longitude], 16),
+        () => map.setView([59.33, 18.07], 10)
+      );
+    } else {
+      map.setView([59.33, 18.07], 10);
+    }
+
+    map.on('click', onMapClick);
+  }
+
+  // ── Markers ────────────────────────────────────────────────────────────
+  async function loadMarkers() {
+    try {
+      state.markers = await api('GET', '/api/markers');
+      renderMarkers();
+    } catch (e) {
+      console.error('Failed to load markers', e);
+    }
+  }
+
+  function markerIcon(severity, status) {
+    return L.divIcon({
+      className: '',
+      html: `<div class="marker-pin ${severity} ${status === 'filled' ? 'filled' : ''}"></div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+      popupAnchor: [0, -28],
+    });
+  }
+
+  function renderMarkers() {
+    layerGroup.clearLayers();
+    state.markers.forEach(m => {
+      const pin = L.marker([m.lat, m.lng], { icon: markerIcon(m.severity, m.status) })
+        .addTo(layerGroup)
+        .on('click', () => openPanel(m.id));
+    });
+  }
+
+  // ── Add mode ───────────────────────────────────────────────────────────
+  function toggleAddMode() {
+    state.addMode = !state.addMode;
+    document.getElementById('fab').classList.toggle('active', state.addMode);
+    document.getElementById('fab').title = state.addMode ? 'Cancel' : 'Add pothole';
+    map.getContainer().style.cursor = state.addMode ? 'crosshair' : '';
+    if (!state.addMode) cancelAdd();
+  }
+
+  function onMapClick(e) {
+    if (!state.addMode) return;
+    state.pendingLatLng = e.latlng;
+    document.getElementById('add-title').value = '';
+    document.getElementById('add-desc').value = '';
+    document.getElementById('add-severity').value = 'medium';
+    document.getElementById('add-modal').classList.add('open');
+  }
+
+  function cancelAdd() {
+    document.getElementById('add-modal').classList.remove('open');
+    state.pendingLatLng = null;
+    if (state.addMode) toggleAddMode();
+  }
+
+  async function submitAdd() {
+    const title = document.getElementById('add-title').value.trim();
+    if (!title) { alert('Please enter a title.'); return; }
+    try {
+      const m = await api('POST', '/api/markers', {
+        lat: state.pendingLatLng.lat,
+        lng: state.pendingLatLng.lng,
+        title,
+        description: document.getElementById('add-desc').value.trim(),
+        severity: document.getElementById('add-severity').value,
+      });
+      state.markers.push(m);
+      renderMarkers();
+      cancelAdd();
+      openPanel(m.id);
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  // ── Panel ──────────────────────────────────────────────────────────────
+  function openPanel(id) {
+    state.selectedId = id;
+    renderPanel();
+    document.getElementById('panel').classList.add('open');
+  }
+
+  function closePanel() {
+    document.getElementById('panel').classList.remove('open');
+    state.selectedId = null;
+  }
+
+  function renderPanel() {
+    const m = state.markers.find(x => x.id === state.selectedId);
+    if (!m) return;
+
+    document.getElementById('panel-title').textContent = m.title;
+    document.getElementById('panel-desc').textContent = m.description || '';
+    document.getElementById('panel-meta').textContent =
+      `Reported ${new Date(m.reported_at).toLocaleDateString()} by ${m.created_by}`;
+
+    document.getElementById('panel-badges').innerHTML =
+      `<span class="badge ${m.severity}">${m.severity}</span>` +
+      `<span class="badge ${m.status}">${m.status}</span>`;
+
+    renderPhotos(m);
+
+    const canEdit = state.user && (state.user.is_admin || m.created_by_id === state.user.id);
+    document.getElementById('panel-actions').innerHTML = canEdit ? `
+      <button class="btn secondary" onclick="toggleStatus()">
+        ${m.status === 'unfilled' ? '✓ Mark filled' : '↺ Mark unfilled'}
+      </button>
+      <button class="btn danger" onclick="deleteMarker()">Delete</button>
+    ` : '';
+  }
+
+  function renderPhotos(m) {
+    const canDelete = state.user && (state.user.is_admin || m.created_by_id === state.user.id);
+    document.getElementById('panel-photos').innerHTML = m.photos.map(p => `
+      <div class="photo-wrap">
+        <img class="photo-thumb" src="${p.url}" loading="lazy" onclick="openLightbox('${p.url}')">
+        ${canDelete ? `<button class="photo-delete" onclick="deletePhoto(${p.id})">×</button>` : ''}
+      </div>
+    `).join('');
+  }
+
+  async function uploadPhoto(event) {
+    const file = event.target.files[0];
+    if (!file || !state.selectedId) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const photo = await apiUpload(`/api/markers/${state.selectedId}/photos`, fd);
+      const m = state.markers.find(x => x.id === state.selectedId);
+      m.photos.push(photo);
+      renderPhotos(m);
+    } catch (e) {
+      alert(e.message);
+    }
+    event.target.value = '';
+  }
+
+  async function deletePhoto(photoId) {
+    if (!confirm('Delete this photo?')) return;
+    try {
+      await api('DELETE', `/api/markers/${state.selectedId}/photos/${photoId}`);
+      const m = state.markers.find(x => x.id === state.selectedId);
+      m.photos = m.photos.filter(p => p.id !== photoId);
+      renderPhotos(m);
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function toggleStatus() {
+    const m = state.markers.find(x => x.id === state.selectedId);
+    const newStatus = m.status === 'unfilled' ? 'filled' : 'unfilled';
+    try {
+      const updated = await api('PATCH', `/api/markers/${state.selectedId}`, { status: newStatus });
+      Object.assign(m, updated);
+      renderMarkers();
+      renderPanel();
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function deleteMarker() {
+    if (!confirm('Delete this marker?')) return;
+    try {
+      await api('DELETE', `/api/markers/${state.selectedId}`);
+      state.markers = state.markers.filter(x => x.id !== state.selectedId);
+      renderMarkers();
+      closePanel();
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  // ── Lightbox ───────────────────────────────────────────────────────────
+  function openLightbox(url) {
+    document.getElementById('lightbox-img').src = url;
+    document.getElementById('lightbox').classList.add('open');
+  }
+
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+  }
+
+  // ── Keyboard / swipe to close panel ───────────────────────────────────
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePanel(); closeLightbox(); } });
+
+  // ── Boot ───────────────────────────────────────────────────────────────
+  if (state.token && state.user) {
+    showApp();
+  }
+</script>
+</body>
+</html>
