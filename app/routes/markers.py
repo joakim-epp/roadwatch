@@ -3,6 +3,7 @@ import io
 import os
 import uuid
 import aiofiles
+from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
@@ -35,6 +36,7 @@ def marker_dict(m: Marker) -> dict:
         "created_by": m.creator.username,
         "created_by_id": m.created_by,
         "photos": [{"id": p.id, "url": f"/uploads/{p.filename}"} for p in m.photos],
+        "filled_at": m.filled_at.isoformat() if m.filled_at else None,
     }
 
 
@@ -118,6 +120,11 @@ def update_marker(
         raise HTTPException(status_code=400, detail="Ogiltig allvarlighetsgrad")
     if "status" in updates and updates["status"] not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="Ogiltig status")
+    if "status" in updates:
+        if updates["status"] == "filled" and m.status == "unfilled":
+            m.filled_at = datetime.now(timezone.utc)
+        elif updates["status"] == "unfilled":
+            m.filled_at = None
     for field, value in updates.items():
         setattr(m, field, value)
     db.commit()

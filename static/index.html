@@ -39,7 +39,7 @@
     #app { display: none; flex-direction: column; height: 100dvh; }
     #app.visible { display: flex; }
     header { display: flex; align-items: center; justify-content: space-between; padding: .625rem 1rem; background: #1e293b; border-bottom: 1px solid #334155; z-index: 1000; flex-shrink: 0; gap: .5rem; }
-    header h1 { font-size: 1.125rem; font-weight: 700; flex-shrink: 0; }
+    header h1 { font-size: 1.125rem; font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .header-right { display: flex; align-items: center; gap: .5rem; min-width: 0; }
     #header-stats { font-size: .75rem; color: #64748b; white-space: nowrap; }
     .username { font-size: .8125rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
@@ -190,7 +190,7 @@
 <!-- App -->
 <div id="app">
   <header>
-    <h1>🛣️ Grop</h1>
+    <h1 id="app-title">🛣️ Grop</h1>
     <div class="header-right">
       <span id="header-stats"></span>
       <span class="username" id="header-username"></span>
@@ -222,7 +222,7 @@
 <div id="list-panel" class="sheet" style="z-index:2500">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <span class="sheet-title">Alla vägskador</span>
+    <span class="sheet-title">📋 Alla vägskador</span>
     <button class="sheet-close" onclick="closeList()">×</button>
   </div>
   <div class="sheet-body" id="list-body"></div>
@@ -257,22 +257,50 @@
 <div id="admin-panel">
   <div class="admin-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-      <h2 style="font-size:1.125rem">Inställningar</h2>
+      <h2 style="font-size:1.125rem">⚙️ Inställningar</h2>
       <button class="sheet-close" onclick="closeAdmin()">×</button>
     </div>
 
-    <p class="section-label">Vägnamn</p>
+    <p class="section-label">🏷️ Vägnamn</p>
     <div style="display:flex;gap:.5rem;margin-bottom:.5rem">
       <input id="road-name-input" type="text" placeholder="t.ex. Gräsö norra enskilda väg" style="flex:1">
       <button class="btn" style="width:auto;padding:.625rem 1rem;white-space:nowrap" onclick="saveRoadName()">Spara</button>
     </div>
     <p style="font-size:.75rem;color:#64748b;margin-bottom:1.5rem">Visas som "Spåra vägskador på ___" på inloggningssidan.</p>
 
-    <p class="section-label">Exportera</p>
-    <button class="btn secondary" style="margin-bottom:1.5rem" onclick="exportCSV()">⬇ Ladda ner CSV</button>
+    <p class="section-label">📤 Exportera</p>
+    <div style="display:flex;gap:.5rem;margin-bottom:1.5rem">
+      <button class="btn secondary" onclick="exportCSV()">⬇ CSV</button>
+      <button class="btn secondary" onclick="openPrintModal()">🖨 Skriv ut rapport</button>
+    </div>
 
-    <p class="section-label">Väntande godkännanden</p>
+    <p class="section-label">👥 Väntande godkännanden</p>
     <div id="admin-list"><p style="color:#94a3b8;font-size:.875rem">Laddar...</p></div>
+  </div>
+</div>
+
+<!-- Print report modal -->
+<div id="print-modal" style="display:none;position:fixed;inset:0;z-index:4000;background:rgba(0,0,0,.6);align-items:center;justify-content:center">
+  <div class="admin-card" style="max-height:unset">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+      <h2 style="font-size:1.125rem">🖨️ Skriv ut rapport</h2>
+      <button class="sheet-close" onclick="closePrintModal()">×</button>
+    </div>
+    <p class="section-label">Period</p>
+    <div style="display:flex;gap:.5rem;margin-bottom:1.5rem">
+      <div class="form-group" style="flex:1;margin-bottom:0">
+        <label>Från</label>
+        <input id="print-start" type="date">
+      </div>
+      <div class="form-group" style="flex:1;margin-bottom:0">
+        <label>Till</label>
+        <input id="print-end" type="date">
+      </div>
+    </div>
+    <div style="display:flex;gap:.5rem">
+      <button class="btn secondary" onclick="closePrintModal()" style="flex:1">Avbryt</button>
+      <button class="btn" onclick="generateReport()" style="flex:2">Generera rapport</button>
+    </div>
   </div>
 </div>
 
@@ -480,12 +508,15 @@
     renderPanel();
     document.getElementById('panel').classList.add('open');
     loadComments();
+    const m = state.markers.find(x => x.id === id);
+    if (m) setTitle(m.title);
   }
 
   function closePanel() {
     document.getElementById('panel').classList.remove('open');
     state.selectedId = null;
     state.editMode = false;
+    setTitle(null);
   }
 
   function renderPanel() {
@@ -521,7 +552,7 @@
       </div>
       <div class="panel-actions">${actions}</div>
       <div class="comments-section">
-        <p class="comments-label">Kommentarer</p>
+        <p class="comments-label">💬 Kommentarer</p>
         <div id="comments-list"><p style="color:#64748b;font-size:.875rem">Laddar...</p></div>
         <div class="comment-input-row">
           <input id="comment-input" type="text" placeholder="Skriv en kommentar..." maxlength="500">
@@ -751,17 +782,143 @@
       await api('PATCH', '/api/settings', { road_name: value });
       settings.road_name = value;
       document.getElementById('auth-subtitle').textContent = `Spåra vägskador på ${value}`;
+      document.getElementById('app-title').textContent = `🛣️ ${value}`;
+      setTitle(null);
       alert('Sparat!');
     } catch (e) { alert(e.message); }
   }
 
   function exportCSV() { window.location.href = '/api/markers/export.csv'; }
 
+  // ── Print report ──────────────────────────────────────────────────────
+  function openPrintModal() {
+    const today = new Date();
+    document.getElementById('print-end').value = today.toISOString().slice(0, 10);
+    const y = today.getFullYear(), mo = today.getMonth();
+    document.getElementById('print-start').value = new Date(y, mo - 11, 1).toISOString().slice(0, 10);
+    document.getElementById('print-modal').style.display = 'flex';
+  }
+
+  function closePrintModal() { document.getElementById('print-modal').style.display = 'none'; }
+
+  function generateReport() {
+    const sv = document.getElementById('print-start').value;
+    const ev = document.getElementById('print-end').value;
+    if (!sv || !ev) { alert('Välj ett datumintervall.'); return; }
+    const start = new Date(sv), end = new Date(ev);
+    end.setHours(23, 59, 59, 999);
+    if (start > end) { alert('Startdatum måste vara före slutdatum.'); return; }
+
+    const reported = state.markers.filter(m => { const d = new Date(m.reported_at); return d >= start && d <= end; });
+    const filledInRange = state.markers.filter(m => { if (!m.filled_at) return false; const d = new Date(m.filled_at); return d >= start && d <= end; });
+    const allOpen = [...state.markers].filter(m => m.status === 'unfilled').sort((a, b) => {
+      return ({ high: 0, medium: 1, low: 2 }[a.severity] - { high: 0, medium: 1, low: 2 }[b.severity]) || new Date(a.reported_at) - new Date(b.reported_at);
+    });
+
+    const months = [];
+    const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+    const endMo = new Date(end.getFullYear(), end.getMonth(), 1);
+    while (cur <= endMo) { months.push(new Date(cur)); cur.setMonth(cur.getMonth() + 1); }
+
+    const sameMonth = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+    const moRep = months.map(m => reported.filter(mk => sameMonth(new Date(mk.reported_at), m)).length);
+    const moFil = months.map(m => filledInRange.filter(mk => sameMonth(new Date(mk.filled_at), m)).length);
+
+    const w = window.open('', '_blank');
+    w.document.write(buildReportHTML(start, end, reported, filledInRange, allOpen, months, moRep, moFil, settings.road_name || 'er väg'));
+    w.document.close();
+    closePrintModal();
+  }
+
+  function buildReportHTML(start, end, reported, filledInRange, allOpen, months, moRep, moFil, roadName) {
+    const fmt = d => d.toLocaleDateString('sv-SE');
+    const fmtMo = d => d.toLocaleDateString('sv-SE', { year: 'numeric', month: 'short' });
+    const bar = (n, max) => `<span style="display:inline-block;background:#111;height:7pt;width:${Math.round((n/Math.max(1,max))*90)}pt;vertical-align:middle"></span>`;
+    const sev = s => reported.filter(m => m.severity === s).length;
+    const maxSev = Math.max(1, sev('high'), sev('medium'), sev('low'));
+    const maxMo = Math.max(1, ...moRep, ...moFil);
+
+    const sevRows = ['high','medium','low'].map(s =>
+      `<tr><td style="width:50pt">${LABELS[s]}</td><td>${bar(sev(s), maxSev)}</td><td style="width:20pt;text-align:right">${sev(s)}</td></tr>`
+    ).join('');
+
+    const moRows = months.map((m, i) =>
+      `<tr><td style="width:60pt">${fmtMo(m)}</td><td>${bar(moRep[i], maxMo)} ${moRep[i]}</td><td>${bar(moFil[i], maxMo)} ${moFil[i]}</td></tr>`
+    ).join('');
+
+    const cap = 20;
+    const openRows = allOpen.slice(0, cap).map(m =>
+      `<tr><td>${m.title}</td><td style="width:50pt">${LABELS[m.severity]}</td><td style="width:60pt">${fmt(new Date(m.reported_at))}</td><td style="width:70pt">${m.created_by}</td></tr>`
+    ).join('');
+    const moreNote = allOpen.length > cap ? `<p style="font-size:8pt;color:#666;margin-top:4pt">+ ${allOpen.length - cap} till</p>` : '';
+
+    return `<!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8">
+<title>Grop Rapport</title>
+<style>
+@page{size:A4 portrait;margin:14mm}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#000;background:#fff}
+h1{font-size:14pt;font-weight:bold;margin-bottom:2pt}
+.sub{font-size:8.5pt;color:#444;margin-bottom:10pt}
+h2{font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:.05em;border-bottom:1pt solid #000;padding-bottom:2pt;margin:10pt 0 5pt}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6pt;margin-bottom:4pt}
+.box{border:1pt solid #bbb;padding:5pt 4pt;text-align:center}
+.num{font-size:15pt;font-weight:bold;line-height:1.1}
+.lbl{font-size:7pt;color:#555;margin-top:1pt}
+table{width:100%;border-collapse:collapse}
+th{font-size:8pt;text-align:left;padding:3pt 4pt;background:#000;color:#fff}
+td{font-size:8pt;padding:2pt 4pt;border-bottom:.5pt solid #ddd;vertical-align:middle}
+.nob td{border-bottom:none}
+.noprint{margin-bottom:12pt}
+@media print{.noprint{display:none}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+</style></head><body>
+<div class="noprint" style="padding:8pt 0 0">
+  <button onclick="window.print()" style="padding:6pt 16pt;font-size:10pt;cursor:pointer;margin-right:8pt">Skriv ut</button>
+  <button onclick="window.close()" style="padding:6pt 16pt;font-size:10pt;cursor:pointer">Stäng</button>
+</div>
+<h1>🛣️ Grop — Vägskaderapport</h1>
+<p class="sub">${roadName} &nbsp;·&nbsp; Period: ${fmt(start)} – ${fmt(end)} &nbsp;·&nbsp; Utskriven: ${fmt(new Date())}</p>
+
+<h2>Sammanfattning</h2>
+<div class="grid">
+  <div class="box"><div class="num">${reported.length}</div><div class="lbl">Rapporterade<br>i perioden</div></div>
+  <div class="box"><div class="num">${filledInRange.length}</div><div class="lbl">Igenfyllda<br>i perioden</div></div>
+  <div class="box"><div class="num">${reported.filter(m=>m.status==='unfilled').length}</div><div class="lbl">Fortfarande öppna<br>av dessa</div></div>
+  <div class="box"><div class="num">${allOpen.length}</div><div class="lbl">Totalt öppna<br>(alla tider)</div></div>
+</div>
+
+<h2>Allvarlighetsgrad (rapporterade i perioden)</h2>
+<table class="nob"><tbody>${sevRows}</tbody></table>
+
+<h2>Per månad</h2>
+<table>
+<thead><tr><th>Månad</th><th>Rapporterade</th><th>Igenfyllda</th></tr></thead>
+<tbody>${moRows}</tbody>
+</table>
+
+<h2>Öppna vägskador — alla tider (${allOpen.length} st)</h2>
+<table>
+<thead><tr><th>Titel</th><th>Allvarlighet</th><th>Rapporterad</th><th>Av</th></tr></thead>
+<tbody>${openRows}</tbody>
+</table>${moreNote}
+</body></html>`;
+  }
+
+  // ── Title ─────────────────────────────────────────────────────────────
+  function setTitle(sub) {
+    const road = settings.road_name || 'Grop';
+    document.title = sub ? `${sub} · ${road}` : road;
+  }
+
   // ── Settings ──────────────────────────────────────────────────────────
   async function loadSettings() {
     try {
       settings = await api('GET', '/api/settings');
-      if (settings.road_name) document.getElementById('auth-subtitle').textContent = `Spåra vägskador på ${settings.road_name}`;
+      if (settings.road_name) {
+        document.getElementById('auth-subtitle').textContent = `Spåra vägskador på ${settings.road_name}`;
+        document.getElementById('app-title').textContent = `🛣️ ${settings.road_name}`;
+        setTitle(null);
+      }
     } catch (_) {}
   }
 

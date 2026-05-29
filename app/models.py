@@ -29,6 +29,7 @@ class Marker(Base):
     severity = Column(String, default="medium")  # low | medium | high
     status = Column(String, default="unfilled")   # unfilled | filled
     reported_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    filled_at = Column(DateTime, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     creator = relationship("User", back_populates="markers")
