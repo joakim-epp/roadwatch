@@ -822,18 +822,23 @@
             <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name || u.username}</div>
             <div style="font-size:.8125rem;color:#64748b">${u.username}</div>
           </div>
-          <button class="btn sm secondary" onclick="startEditName(${u.id},${JSON.stringify(u.name||'')})">Ändra namn</button>
+          <button class="btn sm secondary" data-uid="${u.id}" data-name="${(u.name||'').replace(/"/g,'&quot;')}" onclick="startEditName(this)">Ändra namn</button>
         </div>`).join('');
   }
 
-  function startEditName(id, currentName) {
-    document.getElementById(`urow-${id}`).innerHTML = `
-      <input id="nminput-${id}" type="text" value="${currentName.replace(/"/g,'&quot;')}" placeholder="Förnamn Efternamn"
+  function startEditName(btn) {
+    const id = btn.dataset.uid;
+    const currentName = btn.dataset.name;
+    const row = document.getElementById(`urow-${id}`);
+    row.innerHTML = `
+      <input id="nminput-${id}" type="text" placeholder="Förnamn Efternamn"
         style="flex:1;padding:.375rem .625rem;background:#0f172a;border:1px solid #3b82f6;border-radius:.375rem;color:#f1f5f9;font-size:.875rem;min-width:0"
         onkeydown="if(event.key==='Enter')saveUserName(${id});if(event.key==='Escape')openAdmin()">
       <button class="btn sm" onclick="saveUserName(${id})">Spara</button>
       <button class="btn sm secondary" onclick="openAdmin()">✕</button>`;
-    document.getElementById(`nminput-${id}`).focus();
+    const input = document.getElementById(`nminput-${id}`);
+    input.value = currentName;
+    input.focus();
   }
 
   async function saveUserName(id) {
