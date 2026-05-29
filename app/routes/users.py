@@ -65,6 +65,29 @@ def me(user: User = Depends(get_current_user)):
     return user_dict(user)
 
 
+@router.get("/approved")
+def approved_users(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return [user_dict(u) for u in db.query(User).filter(User.is_approved == 1).order_by(User.created_at).all()]
+
+
+class UpdateUserBody(BaseModel):
+    name: str
+
+
+@router.patch("/{user_id}")
+def update_user(user_id: int, body: UpdateUserBody, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="Användaren hittades inte")
+    target.name = body.name.strip() or None
+    db.commit()
+    return user_dict(target)
+
+
 @router.get("/pending")
 def pending_users(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user.is_admin:

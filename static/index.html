@@ -287,6 +287,9 @@
 
     <p class="section-label">👥 Väntande godkännanden</p>
     <div id="admin-list"><p style="color:#94a3b8;font-size:.875rem">Laddar...</p></div>
+
+    <p class="section-label" style="margin-top:1.5rem">👤 Användare</p>
+    <div id="admin-users"><p style="color:#94a3b8;font-size:.875rem">Laddar...</p></div>
   </div>
 </div>
 
@@ -784,11 +787,15 @@
     document.getElementById('admin-panel').style.display = 'flex';
     document.getElementById('road-name-input').value = settings.road_name || '';
     document.getElementById('admin-list').innerHTML = '<p style="color:#94a3b8;font-size:.875rem">Laddar...</p>';
+    document.getElementById('admin-users').innerHTML = '<p style="color:#94a3b8;font-size:.875rem">Laddar...</p>';
     try {
-      const users = await api('GET', '/api/users/pending');
-      document.getElementById('admin-list').innerHTML = users.length === 0
+      const [pending, approved] = await Promise.all([
+        api('GET', '/api/users/pending'),
+        api('GET', '/api/users/approved'),
+      ]);
+      document.getElementById('admin-list').innerHTML = pending.length === 0
         ? '<p style="color:#94a3b8;font-size:.875rem">Inga väntande godkännanden.</p>'
-        : users.map(u => `
+        : pending.map(u => `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:1px solid #334155">
             <div>
               <div style="font-weight:500">${u.name || u.username}</div>
@@ -799,7 +806,44 @@
               <button class="btn sm danger" onclick="rejectUser(${u.id})">Neka</button>
             </div>
           </div>`).join('');
-    } catch (e) { document.getElementById('admin-list').innerHTML = `<p style="color:#f87171">${e.message}</p>`; }
+      renderAdminUsers(approved);
+    } catch (e) {
+      document.getElementById('admin-list').innerHTML = `<p style="color:#f87171">${e.message}</p>`;
+      document.getElementById('admin-users').innerHTML = `<p style="color:#f87171">${e.message}</p>`;
+    }
+  }
+
+  function renderAdminUsers(users) {
+    document.getElementById('admin-users').innerHTML = users.length === 0
+      ? '<p style="color:#94a3b8;font-size:.875rem">Inga godkända användare.</p>'
+      : users.map(u => `
+        <div id="urow-${u.id}" style="display:flex;align-items:center;gap:.5rem;padding:.625rem 0;border-bottom:1px solid #334155">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name || u.username}</div>
+            <div style="font-size:.8125rem;color:#64748b">${u.username}</div>
+          </div>
+          <button class="btn sm secondary" onclick="startEditName(${u.id},${JSON.stringify(u.name||'')})">Ändra namn</button>
+        </div>`).join('');
+  }
+
+  function startEditName(id, currentName) {
+    document.getElementById(`urow-${id}`).innerHTML = `
+      <input id="nminput-${id}" type="text" value="${currentName.replace(/"/g,'&quot;')}" placeholder="Förnamn Efternamn"
+        style="flex:1;padding:.375rem .625rem;background:#0f172a;border:1px solid #3b82f6;border-radius:.375rem;color:#f1f5f9;font-size:.875rem;min-width:0"
+        onkeydown="if(event.key==='Enter')saveUserName(${id});if(event.key==='Escape')openAdmin()">
+      <button class="btn sm" onclick="saveUserName(${id})">Spara</button>
+      <button class="btn sm secondary" onclick="openAdmin()">✕</button>`;
+    document.getElementById(`nminput-${id}`).focus();
+  }
+
+  async function saveUserName(id) {
+    const input = document.getElementById(`nminput-${id}`);
+    if (!input) return;
+    try {
+      await api('PATCH', `/api/users/${id}`, { name: input.value.trim() });
+      showToast('Namn uppdaterat!', 'success');
+      openAdmin();
+    } catch (e) { showToast(e.message); }
   }
 
   function closeAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
