@@ -33,6 +33,7 @@ class Marker(Base):
 
     creator = relationship("User", back_populates="markers")
     photos = relationship("Photo", back_populates="marker", cascade="all, delete-orphan")
+    comments = relationship("Comment", back_populates="marker", cascade="all, delete-orphan", order_by="Comment.created_at")
 
 
 class Setting(Base):
@@ -52,3 +53,16 @@ class Photo(Base):
     uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     marker = relationship("Marker", back_populates="photos")
+
+
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id = Column(Integer, primary_key=True)
+    marker_id = Column(Integer, ForeignKey("markers.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    text = Column(String, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    marker = relationship("Marker", back_populates="comments")
+    author = relationship("User")

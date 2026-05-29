@@ -3,102 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1e293b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/static/manifest.json">
   <title>Grop</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #f1f5f9; height: 100dvh; overflow: hidden; }
 
     /* ── Auth ── */
-    #auth {
-      display: flex; align-items: center; justify-content: center;
-      height: 100dvh; padding: 1rem;
-    }
-    .auth-card {
-      background: #1e293b; border-radius: 1rem; padding: 2rem;
-      width: 100%; max-width: 380px; box-shadow: 0 25px 50px rgba(0,0,0,.5);
-    }
+    #auth { display: flex; align-items: center; justify-content: center; height: 100dvh; padding: 1rem; }
+    .auth-card { background: #1e293b; border-radius: 1rem; padding: 2rem; width: 100%; max-width: 380px; box-shadow: 0 25px 50px rgba(0,0,0,.5); }
     .auth-card h1 { font-size: 1.5rem; margin-bottom: .25rem; }
     .auth-card p { color: #94a3b8; font-size: .875rem; margin-bottom: 1.5rem; }
     .tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
-    .tab {
-      flex: 1; padding: .5rem; border: none; border-radius: .5rem;
-      cursor: pointer; font-size: .875rem; font-weight: 500; transition: .15s;
-    }
+    .tab { flex: 1; padding: .5rem; border: none; border-radius: .5rem; cursor: pointer; font-size: .875rem; font-weight: 500; transition: .15s; }
     .tab.active { background: #3b82f6; color: #fff; }
     .tab:not(.active) { background: #334155; color: #94a3b8; }
     .form-group { margin-bottom: 1rem; }
     label { display: block; font-size: .75rem; color: #94a3b8; margin-bottom: .375rem; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
-    input, select, textarea {
-      width: 100%; padding: .625rem .75rem; background: #0f172a; border: 1px solid #334155;
-      border-radius: .5rem; color: #f1f5f9; font-size: .9375rem; outline: none; transition: border-color .15s;
-    }
+    input, select, textarea { width: 100%; padding: .625rem .75rem; background: #0f172a; border: 1px solid #334155; border-radius: .5rem; color: #f1f5f9; font-size: .9375rem; outline: none; transition: border-color .15s; }
     input:focus, select:focus, textarea:focus { border-color: #3b82f6; }
     textarea { resize: vertical; min-height: 80px; }
-    .btn {
-      width: 100%; padding: .75rem; background: #3b82f6; color: #fff; border: none;
-      border-radius: .5rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: .15s;
-    }
+    .btn { width: 100%; padding: .75rem; background: #3b82f6; color: #fff; border: none; border-radius: .5rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: .15s; }
     .btn:hover { background: #2563eb; }
     .btn:disabled { opacity: .5; cursor: default; }
-    .btn.danger { background: #ef4444; }
-    .btn.danger:hover { background: #dc2626; }
-    .btn.secondary { background: #334155; }
-    .btn.secondary:hover { background: #475569; }
+    .btn.danger { background: #ef4444; } .btn.danger:hover { background: #dc2626; }
+    .btn.secondary { background: #334155; } .btn.secondary:hover { background: #475569; }
+    .btn.sm { padding: .375rem .75rem; font-size: .8125rem; width: auto; }
     .error-msg { color: #f87171; font-size: .8125rem; margin-top: .75rem; text-align: center; }
 
-    /* ── App layout ── */
+    /* ── App ── */
     #app { display: none; flex-direction: column; height: 100dvh; }
     #app.visible { display: flex; }
-
-    header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: .625rem 1rem; background: #1e293b; border-bottom: 1px solid #334155;
-      z-index: 1000; flex-shrink: 0;
-    }
-    header h1 { font-size: 1.125rem; font-weight: 700; }
-    .header-right { display: flex; align-items: center; gap: .75rem; }
-    .username { font-size: .8125rem; color: #94a3b8; }
-    .icon-btn {
-      background: none; border: none; cursor: pointer; color: #94a3b8;
-      padding: .25rem; display: flex; align-items: center; font-size: 1.25rem;
-    }
+    header { display: flex; align-items: center; justify-content: space-between; padding: .625rem 1rem; background: #1e293b; border-bottom: 1px solid #334155; z-index: 1000; flex-shrink: 0; gap: .5rem; }
+    header h1 { font-size: 1.125rem; font-weight: 700; flex-shrink: 0; }
+    .header-right { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+    #header-stats { font-size: .75rem; color: #64748b; white-space: nowrap; }
+    .username { font-size: .8125rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
+    .icon-btn { background: none; border: none; cursor: pointer; color: #94a3b8; padding: .25rem; display: flex; align-items: center; font-size: 1.25rem; flex-shrink: 0; }
     .icon-btn:hover { color: #f1f5f9; }
-
     #map { flex: 1; }
 
+    /* ── Filter bar ── */
+    #filter-bar { position: fixed; bottom: 5.5rem; left: 1rem; z-index: 999; display: flex; flex-direction: column; gap: .375rem; }
+    .filter-btn { padding: .375rem .75rem; border: none; border-radius: .5rem; font-size: .8125rem; font-weight: 500; cursor: pointer; background: rgba(15,23,42,.85); color: #94a3b8; backdrop-filter: blur(6px); white-space: nowrap; transition: .15s; border: 1px solid #334155; }
+    .filter-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+
     /* ── FAB ── */
-    #fab {
-      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1000;
-      width: 56px; height: 56px; background: #3b82f6; color: #fff;
-      border: none; border-radius: 50%; font-size: 1.75rem; cursor: pointer;
-      box-shadow: 0 4px 14px rgba(59,130,246,.5); display: flex; align-items: center; justify-content: center;
-      transition: .15s;
-    }
+    #fab { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1000; width: 56px; height: 56px; background: #3b82f6; color: #fff; border: none; border-radius: 50%; font-size: 1.75rem; cursor: pointer; box-shadow: 0 4px 14px rgba(59,130,246,.5); display: flex; align-items: center; justify-content: center; transition: .15s; }
     #fab:hover { background: #2563eb; transform: scale(1.05); }
     #fab.active { background: #ef4444; box-shadow: 0 4px 14px rgba(239,68,68,.5); }
 
-    /* ── Panel (marker detail) ── */
-    #panel {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000;
-      background: #1e293b; border-radius: 1rem 1rem 0 0;
-      box-shadow: 0 -8px 32px rgba(0,0,0,.4);
-      max-height: 80dvh; display: flex; flex-direction: column;
-      transform: translateY(100%); transition: transform .25s ease;
-    }
-    #panel.open { transform: translateY(0); }
+    /* ── Bottom sheets ── */
+    .sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000; background: #1e293b; border-radius: 1rem 1rem 0 0; box-shadow: 0 -8px 32px rgba(0,0,0,.4); max-height: 82dvh; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .25s ease; }
+    .sheet.open { transform: translateY(0); }
+    .sheet-handle { width: 40px; height: 4px; background: #475569; border-radius: 2px; margin: .75rem auto .25rem; flex-shrink: 0; }
+    .sheet-header { display: flex; align-items: flex-start; justify-content: space-between; padding: .5rem 1rem 0; gap: .5rem; flex-shrink: 0; }
+    .sheet-title { font-size: 1.125rem; font-weight: 600; flex: 1; }
+    .sheet-close { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; line-height: 1; padding: 0; flex-shrink: 0; }
+    .sheet-body { overflow-y: auto; padding: .75rem 1rem 2rem; flex: 1; }
 
-    .panel-handle { width: 40px; height: 4px; background: #475569; border-radius: 2px; margin: .75rem auto .25rem; }
-    .panel-header { display: flex; align-items: flex-start; justify-content: space-between; padding: .5rem 1rem 0; gap: .5rem; }
-    .panel-title { font-size: 1.125rem; font-weight: 600; flex: 1; }
-    .panel-close { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; line-height: 1; padding: 0; }
-    .panel-body { overflow-y: auto; padding: .75rem 1rem 2rem; flex: 1; }
-
+    /* ── Badges ── */
     .badges { display: flex; gap: .5rem; margin-bottom: .75rem; flex-wrap: wrap; }
-    .badge {
-      padding: .25rem .625rem; border-radius: 999px; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
-    }
+    .badge { padding: .25rem .625rem; border-radius: 999px; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
     .badge.low { background: #14532d; color: #86efac; }
     .badge.medium { background: #7c2d12; color: #fdba74; }
     .badge.high { background: #7f1d1d; color: #fca5a5; }
@@ -108,62 +78,71 @@
     .panel-desc { color: #cbd5e1; font-size: .9375rem; line-height: 1.5; margin-bottom: .75rem; }
     .panel-meta { font-size: .8125rem; color: #64748b; margin-bottom: 1rem; }
 
-    .photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: .5rem; margin-bottom: 1rem; }
-    .photo-thumb {
-      aspect-ratio: 1; object-fit: cover; border-radius: .5rem; cursor: pointer;
-      width: 100%; background: #0f172a;
-    }
+    /* ── Photos ── */
+    .photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: .5rem; margin-bottom: 1rem; }
+    .photo-thumb { aspect-ratio: 1; object-fit: cover; border-radius: .5rem; cursor: pointer; width: 100%; background: #0f172a; }
     .photo-wrap { position: relative; }
-    .photo-delete {
-      position: absolute; top: .25rem; right: .25rem; background: rgba(0,0,0,.7);
-      border: none; color: #fff; border-radius: 50%; width: 22px; height: 22px;
-      font-size: .75rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    }
-
+    .photo-delete { position: absolute; top: .25rem; right: .25rem; background: rgba(0,0,0,.7); border: none; color: #fff; border-radius: 50%; width: 22px; height: 22px; font-size: .75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .upload-btn-wrap { margin-bottom: 1rem; }
     .upload-btn-wrap input[type=file] { display: none; }
-    .upload-label {
-      display: flex; align-items: center; justify-content: center; gap: .5rem;
-      padding: .625rem; border: 1.5px dashed #475569; border-radius: .5rem;
-      cursor: pointer; color: #94a3b8; font-size: .875rem; transition: .15s;
-    }
+    .upload-label { display: flex; align-items: center; justify-content: center; gap: .5rem; padding: .625rem; border: 1.5px dashed #475569; border-radius: .5rem; cursor: pointer; color: #94a3b8; font-size: .875rem; transition: .15s; }
     .upload-label:hover { border-color: #3b82f6; color: #3b82f6; }
 
-    .panel-actions { display: flex; gap: .5rem; margin-top: .5rem; }
-    .panel-actions .btn { width: auto; flex: 1; padding: .5rem; font-size: .875rem; }
+    /* ── Panel actions ── */
+    .panel-actions { display: flex; gap: .5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .panel-actions .btn { flex: 1; min-width: 0; padding: .5rem; font-size: .875rem; }
 
-    /* ── Add marker modal ── */
-    #add-modal {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 3000;
-      background: #1e293b; border-radius: 1rem 1rem 0 0;
-      box-shadow: 0 -8px 32px rgba(0,0,0,.4);
-      transform: translateY(100%); transition: transform .25s ease;
-      padding: 0 1rem 2rem;
-    }
+    /* ── Comments ── */
+    .comments-section { border-top: 1px solid #334155; padding-top: 1rem; margin-top: .5rem; }
+    .comments-label { font-size: .75rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .75rem; }
+    .comment { padding: .625rem 0; border-bottom: 1px solid #1e293b; }
+    .comment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .25rem; }
+    .comment-author { font-size: .8125rem; font-weight: 600; color: #94a3b8; }
+    .comment-date { font-size: .75rem; color: #475569; }
+    .comment-text { font-size: .9375rem; color: #cbd5e1; line-height: 1.4; }
+    .comment-delete { background: none; border: none; color: #475569; cursor: pointer; font-size: .875rem; padding: 0 .25rem; }
+    .comment-delete:hover { color: #ef4444; }
+    .comment-input-row { display: flex; gap: .5rem; margin-top: .75rem; }
+    .comment-input-row input { flex: 1; }
+    .comment-input-row .btn { width: auto; padding: .625rem 1rem; font-size: .875rem; flex-shrink: 0; }
+
+    /* ── List panel ── */
+    .list-item { display: flex; align-items: center; gap: .75rem; padding: .75rem 0; border-bottom: 1px solid #334155; cursor: pointer; }
+    .list-item:hover { background: rgba(255,255,255,.02); }
+    .list-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .list-dot.low { background: #22c55e; }
+    .list-dot.medium { background: #f97316; }
+    .list-dot.high { background: #ef4444; }
+    .list-dot.filled { opacity: .4; }
+    .list-item-info { flex: 1; min-width: 0; }
+    .list-item-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .list-item-meta { font-size: .8125rem; color: #64748b; margin-top: .125rem; }
+    .list-item-badge { flex-shrink: 0; }
+
+    /* ── Add modal ── */
+    #add-modal { position: fixed; bottom: 0; left: 0; right: 0; z-index: 3000; background: #1e293b; border-radius: 1rem 1rem 0 0; box-shadow: 0 -8px 32px rgba(0,0,0,.4); transform: translateY(100%); transition: transform .25s ease; padding: 0 1rem 2rem; }
     #add-modal.open { transform: translateY(0); }
     #add-modal h2 { font-size: 1rem; font-weight: 600; padding: 1rem 0 .75rem; }
 
+    /* ── Admin panel ── */
+    #admin-panel { display: none; position: fixed; inset: 0; z-index: 4000; background: rgba(0,0,0,.6); align-items: center; justify-content: center; }
+    .admin-card { background: #1e293b; border-radius: 1rem; padding: 1.5rem; width: 100%; max-width: 420px; margin: 1rem; max-height: 80dvh; overflow-y: auto; }
+
     /* ── Lightbox ── */
-    #lightbox {
-      display: none; position: fixed; inset: 0; z-index: 9999;
-      background: rgba(0,0,0,.95); align-items: center; justify-content: center;
-    }
+    #lightbox { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.95); align-items: center; justify-content: center; }
     #lightbox.open { display: flex; }
     #lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    #lightbox-close {
-      position: absolute; top: 1rem; right: 1rem; background: none; border: none;
-      color: #fff; font-size: 2rem; cursor: pointer;
-    }
+    #lightbox-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: #fff; font-size: 2rem; cursor: pointer; }
 
     /* ── Marker icons ── */
-    .marker-pin {
-      width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
-      border: 2px solid rgba(0,0,0,.3); box-shadow: 0 2px 6px rgba(0,0,0,.4);
-    }
+    .marker-pin { width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid rgba(0,0,0,.3); box-shadow: 0 2px 6px rgba(0,0,0,.4); }
     .marker-pin.low { background: #22c55e; }
     .marker-pin.medium { background: #f97316; }
     .marker-pin.high { background: #ef4444; }
     .marker-pin.filled { opacity: .45; }
+
+    /* ── Section label ── */
+    .section-label { font-size: .75rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .75rem; }
   </style>
 </head>
 <body>
@@ -177,7 +156,6 @@
       <button class="tab active" onclick="showTab('login')">Logga in</button>
       <button class="tab" onclick="showTab('register')">Registrera</button>
     </div>
-
     <div id="login-form">
       <div class="form-group">
         <label>Användarnamn</label>
@@ -189,7 +167,6 @@
       </div>
       <button class="btn" onclick="doLogin()">Logga in</button>
     </div>
-
     <div id="register-form" style="display:none">
       <div class="form-group">
         <label>Användarnamn</label>
@@ -205,7 +182,6 @@
       </div>
       <button class="btn" onclick="doRegister()">Skapa konto</button>
     </div>
-
     <div id="auth-error" class="error-msg"></div>
     <div id="auth-pending" style="display:none;margin-top:1rem;padding:.875rem;background:#1a2e1a;border-radius:.5rem;color:#86efac;font-size:.875rem;line-height:1.5;text-align:center"></div>
   </div>
@@ -216,33 +192,40 @@
   <header>
     <h1>🛣️ Grop</h1>
     <div class="header-right">
+      <span id="header-stats"></span>
       <span class="username" id="header-username"></span>
+      <button class="icon-btn" id="list-btn" onclick="openList()" title="Lista alla vägskador">☰</button>
       <button class="icon-btn" id="admin-btn" onclick="openAdmin()" title="Hantera användare" style="display:none">⚙</button>
       <button class="icon-btn" onclick="doLogout()" title="Logga ut">⏏</button>
     </div>
   </header>
   <div id="map"></div>
+  <div id="filter-bar">
+    <button class="filter-btn active" onclick="setFilter('all')">Alla</button>
+    <button class="filter-btn" onclick="setFilter('unfilled')">Öppna</button>
+    <button class="filter-btn" onclick="setFilter('filled')">Igenfyllda</button>
+  </div>
   <button id="fab" onclick="toggleAddMode()" title="Lägg till vägskada">＋</button>
 </div>
 
 <!-- Marker detail panel -->
-<div id="panel">
-  <div class="panel-handle"></div>
-  <div class="panel-header">
-    <span class="panel-title" id="panel-title"></span>
-    <button class="panel-close" onclick="closePanel()">×</button>
+<div id="panel" class="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title" id="panel-title"></span>
+    <button class="sheet-close" onclick="closePanel()">×</button>
   </div>
-  <div class="panel-body">
-    <div class="badges" id="panel-badges"></div>
-    <p class="panel-desc" id="panel-desc"></p>
-    <p class="panel-meta" id="panel-meta"></p>
-    <div class="photos-grid" id="panel-photos"></div>
-    <div class="upload-btn-wrap">
-      <label class="upload-label" for="photo-input">📷 Lägg till foto</label>
-      <input id="photo-input" type="file" accept="image/*" onchange="uploadPhoto(event)">
-    </div>
-    <div class="panel-actions" id="panel-actions"></div>
+  <div class="sheet-body" id="panel-body"></div>
+</div>
+
+<!-- List panel -->
+<div id="list-panel" class="sheet" style="z-index:2500">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title">Alla vägskador</span>
+    <button class="sheet-close" onclick="closeList()">×</button>
   </div>
+  <div class="sheet-body" id="list-body"></div>
 </div>
 
 <!-- Add marker modal -->
@@ -271,22 +254,25 @@
 </div>
 
 <!-- Admin panel -->
-<div id="admin-panel" style="display:none;position:fixed;inset:0;z-index:4000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;">
-  <div style="background:#1e293b;border-radius:1rem;padding:1.5rem;width:100%;max-width:420px;margin:1rem;max-height:80dvh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-      <h2 style="font-size:1.125rem" id="admin-title">Inställningar</h2>
-      <button class="panel-close" onclick="closeAdmin()">×</button>
+<div id="admin-panel">
+  <div class="admin-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+      <h2 style="font-size:1.125rem">Inställningar</h2>
+      <button class="sheet-close" onclick="closeAdmin()">×</button>
     </div>
-    <div id="admin-settings" style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid #334155">
-      <p style="font-size:.8125rem;color:#94a3b8;margin-bottom:.75rem;font-weight:500;text-transform:uppercase;letter-spacing:.05em">Vägnamn</p>
-      <div style="display:flex;gap:.5rem">
-        <input id="road-name-input" type="text" placeholder="t.ex. Gräsö norra enskilda väg" style="flex:1">
-        <button class="btn" style="width:auto;padding:.625rem 1rem;white-space:nowrap" onclick="saveRoadName()">Spara</button>
-      </div>
-      <p style="font-size:.75rem;color:#64748b;margin-top:.5rem">Visas som "Spåra vägskador på ___" på inloggningssidan.</p>
+
+    <p class="section-label">Vägnamn</p>
+    <div style="display:flex;gap:.5rem;margin-bottom:.5rem">
+      <input id="road-name-input" type="text" placeholder="t.ex. Gräsö norra enskilda väg" style="flex:1">
+      <button class="btn" style="width:auto;padding:.625rem 1rem;white-space:nowrap" onclick="saveRoadName()">Spara</button>
     </div>
-    <p style="font-size:.8125rem;color:#94a3b8;margin-bottom:.75rem;font-weight:500;text-transform:uppercase;letter-spacing:.05em">Väntande godkännanden</p>
-    <div id="admin-list"></div>
+    <p style="font-size:.75rem;color:#64748b;margin-bottom:1.5rem">Visas som "Spåra vägskador på ___" på inloggningssidan.</p>
+
+    <p class="section-label">Exportera</p>
+    <button class="btn secondary" style="margin-bottom:1.5rem" onclick="exportCSV()">⬇ Ladda ner CSV</button>
+
+    <p class="section-label">Väntande godkännanden</p>
+    <div id="admin-list"><p style="color:#94a3b8;font-size:.875rem">Laddar...</p></div>
   </div>
 </div>
 
@@ -298,12 +284,8 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  const LABELS = {
-    low: 'Låg', medium: 'Medel', high: 'Hög',
-    unfilled: 'Inte igenfylld', filled: 'Igenfylld',
-  };
+  const LABELS = { low: 'Låg', medium: 'Medel', high: 'Hög', unfilled: 'Inte igenfylld', filled: 'Igenfylld' };
 
-  // ── State ──────────────────────────────────────────────────────────────
   let state = {
     token: localStorage.getItem('rw_token'),
     user: JSON.parse(localStorage.getItem('rw_user') || 'null'),
@@ -311,39 +293,31 @@
     addMode: false,
     pendingLatLng: null,
     selectedId: null,
+    editMode: false,
+    filter: 'all',
   };
 
   let map, layerGroup, settings = {};
 
-  // ── API helpers ────────────────────────────────────────────────────────
+  // ── API ───────────────────────────────────────────────────────────────
   async function api(method, path, body) {
-    const opts = {
-      method,
-      headers: { 'Content-Type': 'application/json', ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}) },
-    };
+    const opts = { method, headers: { 'Content-Type': 'application/json', ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}) } };
     if (body) opts.body = JSON.stringify(body);
     const res = await fetch(path, opts);
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: 'Request failed' }));
-      throw new Error(err.detail || 'Request failed');
+      const err = await res.json().catch(() => ({ detail: 'Något gick fel' }));
+      throw new Error(err.detail || 'Något gick fel');
     }
     return res.json();
   }
 
   async function apiUpload(path, formData) {
-    const res = await fetch(path, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${state.token}` },
-      body: formData,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: 'Upload failed' }));
-      throw new Error(err.detail || 'Upload failed');
-    }
+    const res = await fetch(path, { method: 'POST', headers: { Authorization: `Bearer ${state.token}` }, body: formData });
+    if (!res.ok) { const err = await res.json().catch(() => ({ detail: 'Uppladdning misslyckades' })); throw new Error(err.detail); }
     return res.json();
   }
 
-  // ── Auth ───────────────────────────────────────────────────────────────
+  // ── Auth ──────────────────────────────────────────────────────────────
   function showTab(tab) {
     document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === (tab === 'login' ? 0 : 1)));
     document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
@@ -352,32 +326,27 @@
   }
 
   async function doLogin() {
-    const username = document.getElementById('login-username').value.trim();
-    const password = document.getElementById('login-password').value;
     try {
-      const data = await api('POST', '/api/users/login', { username, password });
-      saveSession(data);
-    } catch (e) {
-      document.getElementById('auth-error').textContent = e.message;
-    }
+      saveSession(await api('POST', '/api/users/login', {
+        username: document.getElementById('login-username').value.trim(),
+        password: document.getElementById('login-password').value,
+      }));
+    } catch (e) { document.getElementById('auth-error').textContent = e.message; }
   }
 
   async function doRegister() {
-    const username = document.getElementById('reg-username').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-password').value;
     try {
-      const data = await api('POST', '/api/users/register', { username, email, password });
+      const data = await api('POST', '/api/users/register', {
+        username: document.getElementById('reg-username').value.trim(),
+        email: document.getElementById('reg-email').value.trim(),
+        password: document.getElementById('reg-password').value,
+      });
       if (data.pending) {
         document.getElementById('auth-pending').textContent = data.message;
         document.getElementById('auth-pending').style.display = 'block';
         document.getElementById('auth-error').textContent = '';
-      } else {
-        saveSession(data);
-      }
-    } catch (e) {
-      document.getElementById('auth-error').textContent = e.message;
-    }
+      } else { saveSession(data); }
+    } catch (e) { document.getElementById('auth-error').textContent = e.message; }
   }
 
   function saveSession(data) {
@@ -389,14 +358,12 @@
   }
 
   function doLogout() {
-    state.token = null;
-    state.user = null;
-    localStorage.removeItem('rw_token');
-    localStorage.removeItem('rw_user');
+    state.token = null; state.user = null;
+    localStorage.removeItem('rw_token'); localStorage.removeItem('rw_user');
     location.reload();
   }
 
-  // ── App init ───────────────────────────────────────────────────────────
+  // ── App init ──────────────────────────────────────────────────────────
   function showApp() {
     document.getElementById('auth').style.display = 'none';
     document.getElementById('app').classList.add('visible');
@@ -404,106 +371,69 @@
     if (state.user.is_admin) document.getElementById('admin-btn').style.display = '';
     initMap();
     loadMarkers();
+    setTimeout(() => map && map.invalidateSize(), 100);
   }
 
-  // ── Admin ──────────────────────────────────────────────────────────────
-  async function openAdmin() {
-    document.getElementById('admin-panel').style.display = 'flex';
-    document.getElementById('road-name-input').value = settings.road_name || '';
-    document.getElementById('admin-list').innerHTML = '<p style="color:#94a3b8;font-size:.875rem">Laddar...</p>';
-    try {
-      const users = await api('GET', '/api/users/pending');
-      document.getElementById('admin-list').innerHTML = users.length === 0
-        ? '<p style="color:#94a3b8;font-size:.875rem">Inga väntande godkännanden.</p>'
-        : users.map(u => `
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:1px solid #334155">
-            <div>
-              <div style="font-weight:500">${u.username}</div>
-              <div style="font-size:.8125rem;color:#64748b">${u.email}</div>
-            </div>
-            <div style="display:flex;gap:.5rem">
-              <button class="btn" style="width:auto;padding:.375rem .75rem;font-size:.8125rem" onclick="approveUser(${u.id})">Godkänn</button>
-              <button class="btn danger" style="width:auto;padding:.375rem .75rem;font-size:.8125rem" onclick="rejectUser(${u.id})">Neka</button>
-            </div>
-          </div>`).join('');
-    } catch (e) {
-      document.getElementById('admin-list').innerHTML = `<p style="color:#f87171">${e.message}</p>`;
-    }
-  }
-
-  function closeAdmin() {
-    document.getElementById('admin-panel').style.display = 'none';
-  }
-
-  async function approveUser(id) {
-    await api('POST', `/api/users/${id}/approve`);
-    openAdmin();
-  }
-
-  async function rejectUser(id) {
-    if (!confirm('Neka och ta bort denna användare?')) return;
-    await api('DELETE', `/api/users/${id}`);
-    openAdmin();
-  }
-
+  // ── Map ───────────────────────────────────────────────────────────────
   function initMap() {
     map = L.map('map', { zoomControl: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 19,
-    }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
     layerGroup = L.layerGroup().addTo(map);
 
     const DEFAULT = [60.48187, 18.42600];
-    const BOUNDS = [[60.36, 18.18], [60.62, 18.68]];
+    const BOUNDS = L.latLngBounds([[60.36, 18.18], [60.62, 18.68]]);
+    map.setView(DEFAULT, 15);
     map.setMaxBounds(BOUNDS);
     map.setMinZoom(11);
+    setTimeout(() => map.invalidateSize(), 50);
 
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const ll = [pos.coords.latitude, pos.coords.longitude];
-          map.setView(map.getBounds().contains(ll) ? ll : DEFAULT, 15);
-        },
-        () => map.setView(DEFAULT, 15)
-      );
-    } else {
-      map.setView(DEFAULT, 15);
+      navigator.geolocation.getCurrentPosition(pos => {
+        const ll = L.latLng(pos.coords.latitude, pos.coords.longitude);
+        if (BOUNDS.contains(ll)) map.setView(ll, 16);
+      });
     }
-
     map.on('click', onMapClick);
-  }
-
-  // ── Markers ────────────────────────────────────────────────────────────
-  async function loadMarkers() {
-    try {
-      state.markers = await api('GET', '/api/markers');
-      renderMarkers();
-    } catch (e) {
-      console.error('Failed to load markers', e);
-    }
   }
 
   function markerIcon(severity, status) {
     return L.divIcon({
       className: '',
       html: `<div class="marker-pin ${severity} ${status === 'filled' ? 'filled' : ''}"></div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 28],
-      popupAnchor: [0, -28],
+      iconSize: [28, 28], iconAnchor: [14, 28],
     });
+  }
+
+  // ── Markers ───────────────────────────────────────────────────────────
+  async function loadMarkers() {
+    try { state.markers = await api('GET', '/api/markers'); renderMarkers(); } catch (e) { console.error(e); }
   }
 
   function renderMarkers() {
     layerGroup.clearLayers();
-    state.markers.forEach(m => {
-      const pin = L.marker([m.lat, m.lng], { icon: markerIcon(m.severity, m.status) })
-        .addTo(layerGroup)
-        .on('click', () => openPanel(m.id));
+    const visible = state.filter === 'all' ? state.markers : state.markers.filter(m => m.status === state.filter);
+    visible.forEach(m => {
+      L.marker([m.lat, m.lng], { icon: markerIcon(m.severity, m.status) }).addTo(layerGroup).on('click', () => openPanel(m.id));
     });
+    updateStats();
   }
 
-  // ── Add mode ───────────────────────────────────────────────────────────
+  function updateStats() {
+    const open = state.markers.filter(m => m.status === 'unfilled').length;
+    const filled = state.markers.filter(m => m.status === 'filled').length;
+    document.getElementById('header-stats').textContent = `${open} öppna · ${filled} igenfyllda`;
+  }
+
+  // ── Filter ────────────────────────────────────────────────────────────
+  function setFilter(f) {
+    state.filter = f;
+    document.querySelectorAll('.filter-btn').forEach((btn, i) => {
+      btn.classList.toggle('active', ['all', 'unfilled', 'filled'][i] === f);
+    });
+    renderMarkers();
+  }
+
+  // ── Add mode ──────────────────────────────────────────────────────────
   function toggleAddMode() {
     state.addMode = !state.addMode;
     document.getElementById('fab').classList.toggle('active', state.addMode);
@@ -532,9 +462,7 @@
     if (!title) { alert('Ange en titel.'); return; }
     try {
       const m = await api('POST', '/api/markers', {
-        lat: state.pendingLatLng.lat,
-        lng: state.pendingLatLng.lng,
-        title,
+        lat: state.pendingLatLng.lat, lng: state.pendingLatLng.lng, title,
         description: document.getElementById('add-desc').value.trim(),
         severity: document.getElementById('add-severity').value,
       });
@@ -542,55 +470,130 @@
       renderMarkers();
       cancelAdd();
       openPanel(m.id);
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
   }
 
-  // ── Panel ──────────────────────────────────────────────────────────────
+  // ── Panel ─────────────────────────────────────────────────────────────
   function openPanel(id) {
     state.selectedId = id;
+    state.editMode = false;
     renderPanel();
     document.getElementById('panel').classList.add('open');
+    loadComments();
   }
 
   function closePanel() {
     document.getElementById('panel').classList.remove('open');
     state.selectedId = null;
+    state.editMode = false;
   }
 
   function renderPanel() {
     const m = state.markers.find(x => x.id === state.selectedId);
     if (!m) return;
-
-    document.getElementById('panel-title').textContent = m.title;
-    document.getElementById('panel-desc').textContent = m.description || '';
-    document.getElementById('panel-meta').textContent =
-      `Rapporterad ${new Date(m.reported_at).toLocaleDateString('sv-SE')} av ${m.created_by}`;
-
-    document.getElementById('panel-badges').innerHTML =
-      `<span class="badge ${m.severity}">${LABELS[m.severity]}</span>` +
-      `<span class="badge ${m.status}">${LABELS[m.status]}</span>`;
-
-    renderPhotos(m);
-
-    const canEdit = state.user && (state.user.is_admin || m.created_by_id === state.user.id);
-    document.getElementById('panel-actions').innerHTML = canEdit ? `
-      <button class="btn secondary" onclick="toggleStatus()">
-        ${m.status === 'unfilled' ? '✓ Markera igenfylld' : '↺ Markera inte igenfylld'}
-      </button>
-      <button class="btn danger" onclick="deleteMarker()">Ta bort</button>
-    ` : '';
+    document.getElementById('panel-title').textContent = state.editMode ? 'Redigera' : m.title;
+    document.getElementById('panel-body').innerHTML = state.editMode ? editHTML(m) : viewHTML(m);
   }
 
-  function renderPhotos(m) {
-    const canDelete = state.user && (state.user.is_admin || m.created_by_id === state.user.id);
-    document.getElementById('panel-photos').innerHTML = m.photos.map(p => `
+  function viewHTML(m) {
+    const canEdit = state.user && (state.user.is_admin || m.created_by_id === state.user.id);
+    const canDeletePhoto = state.user && (state.user.is_admin || m.created_by_id === state.user.id);
+    const photos = m.photos.map(p => `
       <div class="photo-wrap">
         <img class="photo-thumb" src="${p.url}" loading="lazy" onclick="openLightbox('${p.url}')">
-        ${canDelete ? `<button class="photo-delete" onclick="deletePhoto(${p.id})">×</button>` : ''}
+        ${canDeletePhoto ? `<button class="photo-delete" onclick="deletePhoto(${p.id})">×</button>` : ''}
+      </div>`).join('');
+    const actions = canEdit ? `
+      <button class="btn secondary" onclick="toggleStatus()">${m.status === 'unfilled' ? '✓ Markera igenfylld' : '↺ Markera inte igenfylld'}</button>
+      <button class="btn secondary" onclick="enterEditMode()">✎ Redigera</button>
+      <button class="btn danger" onclick="deleteMarker()">Ta bort</button>` : '';
+    return `
+      <div class="badges">
+        <span class="badge ${m.severity}">${LABELS[m.severity]}</span>
+        <span class="badge ${m.status}">${LABELS[m.status]}</span>
       </div>
-    `).join('');
+      ${m.description ? `<p class="panel-desc">${m.description}</p>` : ''}
+      <p class="panel-meta">Rapporterad ${new Date(m.reported_at).toLocaleDateString('sv-SE')} av ${m.created_by}</p>
+      <div class="photos-grid">${photos}</div>
+      <div class="upload-btn-wrap">
+        <label class="upload-label" for="photo-input">📷 Lägg till foto</label>
+        <input id="photo-input" type="file" accept="image/*" onchange="uploadPhoto(event)">
+      </div>
+      <div class="panel-actions">${actions}</div>
+      <div class="comments-section">
+        <p class="comments-label">Kommentarer</p>
+        <div id="comments-list"><p style="color:#64748b;font-size:.875rem">Laddar...</p></div>
+        <div class="comment-input-row">
+          <input id="comment-input" type="text" placeholder="Skriv en kommentar..." maxlength="500">
+          <button class="btn" onclick="submitComment()">Skicka</button>
+        </div>
+      </div>`;
+  }
+
+  function editHTML(m) {
+    return `
+      <div class="form-group">
+        <label>Titel</label>
+        <input id="edit-title" type="text" value="${m.title.replace(/"/g, '&quot;')}">
+      </div>
+      <div class="form-group">
+        <label>Beskrivning</label>
+        <textarea id="edit-desc">${m.description || ''}</textarea>
+      </div>
+      <div class="form-group">
+        <label>Allvarlighetsgrad</label>
+        <select id="edit-severity">
+          <option value="low" ${m.severity==='low'?'selected':''}>Låg — mindre ojämnhet</option>
+          <option value="medium" ${m.severity==='medium'?'selected':''}>Medel — märkbar</option>
+          <option value="high" ${m.severity==='high'?'selected':''}>Hög — farlig</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:.5rem;margin-top:.25rem">
+        <button class="btn secondary" onclick="exitEditMode()" style="flex:1">Avbryt</button>
+        <button class="btn" onclick="saveEdit()" style="flex:2">Spara</button>
+      </div>`;
+  }
+
+  function enterEditMode() { state.editMode = true; renderPanel(); }
+  function exitEditMode() { state.editMode = false; renderPanel(); loadComments(); }
+
+  async function saveEdit() {
+    const title = document.getElementById('edit-title').value.trim();
+    if (!title) { alert('Ange en titel.'); return; }
+    try {
+      const updated = await api('PATCH', `/api/markers/${state.selectedId}`, {
+        title,
+        description: document.getElementById('edit-desc').value.trim(),
+        severity: document.getElementById('edit-severity').value,
+      });
+      const idx = state.markers.findIndex(x => x.id === state.selectedId);
+      state.markers[idx] = updated;
+      state.editMode = false;
+      renderMarkers();
+      renderPanel();
+      loadComments();
+    } catch (e) { alert(e.message); }
+  }
+
+  async function toggleStatus() {
+    const m = state.markers.find(x => x.id === state.selectedId);
+    try {
+      const updated = await api('PATCH', `/api/markers/${state.selectedId}`, { status: m.status === 'unfilled' ? 'filled' : 'unfilled' });
+      Object.assign(m, updated);
+      renderMarkers();
+      renderPanel();
+      loadComments();
+    } catch (e) { alert(e.message); }
+  }
+
+  async function deleteMarker() {
+    if (!confirm('Ta bort denna markör?')) return;
+    try {
+      await api('DELETE', `/api/markers/${state.selectedId}`);
+      state.markers = state.markers.filter(x => x.id !== state.selectedId);
+      renderMarkers();
+      closePanel();
+    } catch (e) { alert(e.message); }
   }
 
   async function uploadPhoto(event) {
@@ -602,10 +605,9 @@
       const photo = await apiUpload(`/api/markers/${state.selectedId}/photos`, fd);
       const m = state.markers.find(x => x.id === state.selectedId);
       m.photos.push(photo);
-      renderPhotos(m);
-    } catch (e) {
-      alert(e.message);
-    }
+      renderPanel();
+      loadComments();
+    } catch (e) { alert(e.message); }
     event.target.value = '';
   }
 
@@ -615,58 +617,131 @@
       await api('DELETE', `/api/markers/${state.selectedId}/photos/${photoId}`);
       const m = state.markers.find(x => x.id === state.selectedId);
       m.photos = m.photos.filter(p => p.id !== photoId);
-      renderPhotos(m);
-    } catch (e) {
-      alert(e.message);
-    }
-  }
-
-  async function toggleStatus() {
-    const m = state.markers.find(x => x.id === state.selectedId);
-    const newStatus = m.status === 'unfilled' ? 'filled' : 'unfilled';
-    try {
-      const updated = await api('PATCH', `/api/markers/${state.selectedId}`, { status: newStatus });
-      Object.assign(m, updated);
-      renderMarkers();
       renderPanel();
-    } catch (e) {
-      alert(e.message);
-    }
+      loadComments();
+    } catch (e) { alert(e.message); }
   }
 
-  async function deleteMarker() {
-    if (!confirm('Ta bort denna markör?')) return;
+  // ── Comments ──────────────────────────────────────────────────────────
+  async function loadComments() {
+    if (!state.selectedId || state.editMode) return;
     try {
-      await api('DELETE', `/api/markers/${state.selectedId}`);
-      state.markers = state.markers.filter(x => x.id !== state.selectedId);
-      renderMarkers();
-      closePanel();
-    } catch (e) {
-      alert(e.message);
-    }
-  }
-
-  // ── Lightbox ───────────────────────────────────────────────────────────
-  function openLightbox(url) {
-    document.getElementById('lightbox-img').src = url;
-    document.getElementById('lightbox').classList.add('open');
-  }
-
-  function closeLightbox() {
-    document.getElementById('lightbox').classList.remove('open');
-  }
-
-  // ── Keyboard / swipe to close panel ───────────────────────────────────
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePanel(); closeLightbox(); } });
-
-  // ── Settings ───────────────────────────────────────────────────────────
-  async function loadSettings() {
-    try {
-      settings = await api('GET', '/api/settings');
-      if (settings.road_name) {
-        document.getElementById('auth-subtitle').textContent = `Spåra vägskador på ${settings.road_name}`;
-      }
+      const comments = await api('GET', `/api/markers/${state.selectedId}/comments`);
+      renderComments(comments);
     } catch (_) {}
+  }
+
+  function renderComments(comments) {
+    const el = document.getElementById('comments-list');
+    if (!el) return;
+    if (comments.length === 0) { el.innerHTML = '<p style="color:#64748b;font-size:.875rem">Inga kommentarer ännu.</p>'; return; }
+    el.innerHTML = comments.map(c => {
+      const canDel = state.user && (state.user.is_admin || c.user_id === state.user.id);
+      return `<div class="comment">
+        <div class="comment-header">
+          <span class="comment-author">${c.author}</span>
+          <div style="display:flex;align-items:center;gap:.5rem">
+            <span class="comment-date">${new Date(c.created_at).toLocaleDateString('sv-SE')}</span>
+            ${canDel ? `<button class="comment-delete" onclick="deleteComment(${c.id})">×</button>` : ''}
+          </div>
+        </div>
+        <p class="comment-text">${c.text}</p>
+      </div>`;
+    }).join('');
+  }
+
+  async function submitComment() {
+    const input = document.getElementById('comment-input');
+    if (!input || !input.value.trim()) return;
+    try {
+      const c = await api('POST', `/api/markers/${state.selectedId}/comments`, { text: input.value.trim() });
+      input.value = '';
+      const el = document.getElementById('comments-list');
+      if (el) {
+        const canDel = true;
+        el.innerHTML += `<div class="comment">
+          <div class="comment-header">
+            <span class="comment-author">${c.author}</span>
+            <div style="display:flex;align-items:center;gap:.5rem">
+              <span class="comment-date">${new Date(c.created_at).toLocaleDateString('sv-SE')}</span>
+              <button class="comment-delete" onclick="deleteComment(${c.id})">×</button>
+            </div>
+          </div>
+          <p class="comment-text">${c.text}</p>
+        </div>`;
+        el.querySelector('p')?.remove();
+      }
+    } catch (e) { alert(e.message); }
+  }
+
+  async function deleteComment(commentId) {
+    if (!confirm('Ta bort kommentar?')) return;
+    try {
+      await api('DELETE', `/api/markers/${state.selectedId}/comments/${commentId}`);
+      loadComments();
+    } catch (e) { alert(e.message); }
+  }
+
+  // ── List view ─────────────────────────────────────────────────────────
+  function openList() {
+    const sorted = [...state.markers].sort((a, b) => {
+      const sev = { high: 0, medium: 1, low: 2 };
+      return (sev[a.severity] - sev[b.severity]) || new Date(b.reported_at) - new Date(a.reported_at);
+    });
+    const visible = state.filter === 'all' ? sorted : sorted.filter(m => m.status === state.filter);
+    document.getElementById('list-body').innerHTML = visible.length === 0
+      ? '<p style="color:#94a3b8;font-size:.875rem">Inga vägskador att visa.</p>'
+      : visible.map(m => `
+        <div class="list-item" onclick="goToMarker(${m.id})">
+          <div class="list-dot ${m.severity} ${m.status === 'filled' ? 'filled' : ''}"></div>
+          <div class="list-item-info">
+            <div class="list-item-title">${m.title}</div>
+            <div class="list-item-meta">${new Date(m.reported_at).toLocaleDateString('sv-SE')} · ${m.created_by}</div>
+          </div>
+          <span class="badge ${m.status} list-item-badge" style="font-size:.7rem">${LABELS[m.status]}</span>
+        </div>`).join('');
+    document.getElementById('list-panel').classList.add('open');
+  }
+
+  function closeList() { document.getElementById('list-panel').classList.remove('open'); }
+
+  function goToMarker(id) {
+    const m = state.markers.find(x => x.id === id);
+    closeList();
+    map.setView([m.lat, m.lng], 17);
+    openPanel(id);
+  }
+
+  // ── Admin ─────────────────────────────────────────────────────────────
+  async function openAdmin() {
+    document.getElementById('admin-panel').style.display = 'flex';
+    document.getElementById('road-name-input').value = settings.road_name || '';
+    document.getElementById('admin-list').innerHTML = '<p style="color:#94a3b8;font-size:.875rem">Laddar...</p>';
+    try {
+      const users = await api('GET', '/api/users/pending');
+      document.getElementById('admin-list').innerHTML = users.length === 0
+        ? '<p style="color:#94a3b8;font-size:.875rem">Inga väntande godkännanden.</p>'
+        : users.map(u => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:1px solid #334155">
+            <div>
+              <div style="font-weight:500">${u.username}</div>
+              <div style="font-size:.8125rem;color:#64748b">${u.email}</div>
+            </div>
+            <div style="display:flex;gap:.5rem">
+              <button class="btn sm" onclick="approveUser(${u.id})">Godkänn</button>
+              <button class="btn sm danger" onclick="rejectUser(${u.id})">Neka</button>
+            </div>
+          </div>`).join('');
+    } catch (e) { document.getElementById('admin-list').innerHTML = `<p style="color:#f87171">${e.message}</p>`; }
+  }
+
+  function closeAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
+
+  async function approveUser(id) { await api('POST', `/api/users/${id}/approve`); openAdmin(); }
+  async function rejectUser(id) {
+    if (!confirm('Neka och ta bort denna användare?')) return;
+    await api('DELETE', `/api/users/${id}`);
+    openAdmin();
   }
 
   async function saveRoadName() {
@@ -677,16 +752,29 @@
       settings.road_name = value;
       document.getElementById('auth-subtitle').textContent = `Spåra vägskador på ${value}`;
       alert('Sparat!');
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
   }
 
-  // ── Boot ───────────────────────────────────────────────────────────────
-  loadSettings();
-  if (state.token && state.user) {
-    showApp();
+  function exportCSV() { window.location.href = '/api/markers/export.csv'; }
+
+  // ── Settings ──────────────────────────────────────────────────────────
+  async function loadSettings() {
+    try {
+      settings = await api('GET', '/api/settings');
+      if (settings.road_name) document.getElementById('auth-subtitle').textContent = `Spåra vägskador på ${settings.road_name}`;
+    } catch (_) {}
   }
+
+  // ── Lightbox ──────────────────────────────────────────────────────────
+  function openLightbox(url) { document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').classList.add('open'); }
+  function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+
+  // ── Keyboard ──────────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePanel(); closeList(); closeLightbox(); } });
+
+  // ── Boot ──────────────────────────────────────────────────────────────
+  loadSettings();
+  if (state.token && state.user) showApp();
 </script>
 </body>
 </html>

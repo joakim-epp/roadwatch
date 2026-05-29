@@ -7,4 +7,10 @@ services:
       - ./data:/data
     environment:
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      # Optional: email notifications for new markers
+      # - SMTP_HOST=smtp.gmail.com
+      # - SMTP_PORT=587
+      # - SMTP_USER=you@gmail.com
+      # - SMTP_PASS=your-app-password
+      # - ADMIN_EMAIL=you@gmail.com
     restart: unless-stopped
