@@ -10,6 +10,7 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 
 class RegisterBody(BaseModel):
     username: str
+    name: str = ""
     email: EmailStr
     password: str
 
@@ -20,7 +21,7 @@ class LoginBody(BaseModel):
 
 
 def user_dict(user: User) -> dict:
-    return {"id": user.id, "username": user.username, "email": user.email, "is_admin": user.is_admin, "is_approved": user.is_approved}
+    return {"id": user.id, "username": user.username, "name": user.name or user.username, "email": user.email, "is_admin": user.is_admin, "is_approved": user.is_approved}
 
 
 @router.post("/register")
@@ -34,6 +35,7 @@ def register(body: RegisterBody, db: Session = Depends(get_db)):
     is_first = db.query(User).count() == 0
     user = User(
         username=body.username,
+        name=body.name.strip() or None,
         email=body.email,
         password_hash=hash_password(body.password),
         is_admin=1 if is_first else 0,
@@ -44,8 +46,8 @@ def register(body: RegisterBody, db: Session = Depends(get_db)):
     db.refresh(user)
 
     if is_first:
-        return {"token": create_token(user.id), "username": user.username, "is_admin": user.is_admin}
-    return {"pending": True, "message": "Account created — waiting for admin approval before you can log in."}
+        return {"token": create_token(user.id), "username": user.username, "name": user.name or user.username, "is_admin": user.is_admin}
+    return {"pending": True, "message": "Konto skapat — väntar på administratörens godkännande."}
 
 
 @router.post("/login")
@@ -55,7 +57,7 @@ def login(body: LoginBody, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     if not user.is_approved:
         raise HTTPException(status_code=403, detail="Your account is awaiting admin approval.")
-    return {"token": create_token(user.id), "username": user.username, "is_admin": user.is_admin}
+    return {"token": create_token(user.id), "username": user.username, "name": user.name or user.username, "is_admin": user.is_admin}
 
 
 @router.get("/me")

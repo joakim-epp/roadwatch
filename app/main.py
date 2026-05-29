@@ -18,6 +18,7 @@ Base.metadata.create_all(bind=engine)
 with engine.connect() as _conn:
     for _stmt in [
         "ALTER TABLE markers ADD COLUMN filled_at DATETIME",
+        "ALTER TABLE users ADD COLUMN name VARCHAR",
     ]:
         try:
             _conn.execute(text(_stmt))

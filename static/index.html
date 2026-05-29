@@ -176,6 +176,10 @@
     </div>
     <div id="register-form" style="display:none">
       <div class="form-group">
+        <label>Ditt namn</label>
+        <input id="reg-name" type="text" autocomplete="name" placeholder="Förnamn Efternamn">
+      </div>
+      <div class="form-group">
         <label>Användarnamn</label>
         <input id="reg-username" type="text" autocomplete="username" placeholder="välj ett användarnamn">
       </div>
@@ -395,6 +399,7 @@
   async function doRegister() {
     try {
       const data = await api('POST', '/api/users/register', {
+        name: document.getElementById('reg-name').value.trim(),
         username: document.getElementById('reg-username').value.trim(),
         email: document.getElementById('reg-email').value.trim(),
         password: document.getElementById('reg-password').value,
@@ -409,7 +414,7 @@
 
   function saveSession(data) {
     state.token = data.token;
-    state.user = { username: data.username, is_admin: data.is_admin };
+    state.user = { username: data.username, name: data.name || data.username, is_admin: data.is_admin };
     localStorage.setItem('rw_token', data.token);
     localStorage.setItem('rw_user', JSON.stringify(state.user));
     showApp();
@@ -425,7 +430,7 @@
   function showApp() {
     document.getElementById('auth').style.display = 'none';
     document.getElementById('app').classList.add('visible');
-    document.getElementById('header-username').textContent = state.user.username;
+    document.getElementById('header-username').textContent = state.user.name || state.user.username;
     if (state.user.is_admin) document.getElementById('admin-btn').style.display = '';
     initMap();
     loadMarkers();
@@ -786,8 +791,8 @@
         : users.map(u => `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:1px solid #334155">
             <div>
-              <div style="font-weight:500">${u.username}</div>
-              <div style="font-size:.8125rem;color:#64748b">${u.email}</div>
+              <div style="font-weight:500">${u.name || u.username}</div>
+              <div style="font-size:.8125rem;color:#64748b">${u.username} · ${u.email}</div>
             </div>
             <div style="display:flex;gap:.5rem">
               <button class="btn sm" onclick="approveUser(${u.id})">Godkänn</button>
@@ -858,13 +863,18 @@
     const moRep = months.map(m => reported.filter(mk => sameMonth(new Date(mk.reported_at), m)).length);
     const moFil = months.map(m => filledInRange.filter(mk => sameMonth(new Date(mk.filled_at), m)).length);
 
+    // Calculate how many open-marker rows fit on A4 after all other sections
+    const fixedPt = 260; // title + summary + severity + section headings
+    const monthPt = months.length * 11;
+    const maxRows = Math.max(5, Math.floor((762 - fixedPt - monthPt - 30) / 11));
+
     const w = window.open('', '_blank');
-    w.document.write(buildReportHTML(start, end, reported, filledInRange, allOpen, months, moRep, moFil, settings.road_name || 'er väg'));
+    w.document.write(buildReportHTML(start, end, reported, filledInRange, allOpen, months, moRep, moFil, settings.road_name || 'er väg', maxRows));
     w.document.close();
     closePrintModal();
   }
 
-  function buildReportHTML(start, end, reported, filledInRange, allOpen, months, moRep, moFil, roadName) {
+  function buildReportHTML(start, end, reported, filledInRange, allOpen, months, moRep, moFil, roadName, maxRows) {
     const fmt = d => d.toLocaleDateString('sv-SE');
     const fmtMo = d => d.toLocaleDateString('sv-SE', { year: 'numeric', month: 'short' });
     const bar = (n, max) => `<span style="display:inline-block;background:#111;height:7pt;width:${Math.round((n/Math.max(1,max))*90)}pt;vertical-align:middle"></span>`;
@@ -880,11 +890,11 @@
       `<tr><td style="width:60pt">${fmtMo(m)}</td><td>${bar(moRep[i], maxMo)} ${moRep[i]}</td><td>${bar(moFil[i], maxMo)} ${moFil[i]}</td></tr>`
     ).join('');
 
-    const cap = 20;
+    const cap = maxRows;
     const openRows = allOpen.slice(0, cap).map(m =>
       `<tr><td>${m.title}</td><td style="width:50pt">${LABELS[m.severity]}</td><td style="width:60pt">${fmt(new Date(m.reported_at))}</td><td style="width:70pt">${m.created_by}</td></tr>`
     ).join('');
-    const moreNote = allOpen.length > cap ? `<p style="font-size:8pt;color:#666;margin-top:4pt">+ ${allOpen.length - cap} till</p>` : '';
+    const moreNote = allOpen.length > cap ? `<p style="font-size:8pt;color:#666;margin-top:4pt">+ ${allOpen.length - cap} till (visar ${cap} av ${allOpen.length})</p>` : '';
 
     return `<!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8">
 <title>Grop Rapport</title>
@@ -910,8 +920,8 @@ td{font-size:8pt;padding:2pt 4pt;border-bottom:.5pt solid #ddd;vertical-align:mi
   <button onclick="window.print()" style="padding:6pt 16pt;font-size:10pt;cursor:pointer;margin-right:8pt">Skriv ut</button>
   <button onclick="window.close()" style="padding:6pt 16pt;font-size:10pt;cursor:pointer">Stäng</button>
 </div>
-<h1>🛣️ Grop — Vägskaderapport</h1>
-<p class="sub">${roadName} &nbsp;·&nbsp; Period: ${fmt(start)} – ${fmt(end)} &nbsp;·&nbsp; Utskriven: ${fmt(new Date())}</p>
+<h1>🛣️ ${roadName}</h1>
+<p class="sub">Vägskaderapport &nbsp;·&nbsp; Period: ${fmt(start)} – ${fmt(end)} &nbsp;·&nbsp; Utskriven: ${fmt(new Date())}</p>
 
 <h2>Sammanfattning</h2>
 <div class="grid">

@@ -33,7 +33,7 @@ def marker_dict(m: Marker) -> dict:
         "severity": m.severity,
         "status": m.status,
         "reported_at": m.reported_at.isoformat(),
-        "created_by": m.creator.username,
+        "created_by": m.creator.name or m.creator.username,
         "created_by_id": m.created_by,
         "photos": [{"id": p.id, "url": f"/uploads/{p.filename}"} for p in m.photos],
         "filled_at": m.filled_at.isoformat() if m.filled_at else None,
@@ -196,7 +196,7 @@ def get_comments(marker_id: int, db: Session = Depends(get_db), user: User = Dep
         {
             "id": c.id,
             "text": c.text,
-            "author": c.author.username,
+            "author": c.author.name or c.author.username,
             "user_id": c.user_id,
             "created_at": c.created_at.isoformat(),
         }
@@ -220,7 +220,7 @@ def add_comment(
     db.add(c)
     db.commit()
     db.refresh(c)
-    return {"id": c.id, "text": c.text, "author": c.author.username, "user_id": c.user_id, "created_at": c.created_at.isoformat()}
+    return {"id": c.id, "text": c.text, "author": c.author.name or c.author.username, "user_id": c.user_id, "created_at": c.created_at.isoformat()}
 
 
 @router.delete("/{marker_id}/comments/{comment_id}")
