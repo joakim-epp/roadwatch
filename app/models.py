@@ -12,6 +12,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
     is_admin = Column(Integer, default=0)
+    is_approved = Column(Integer, default=0)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     markers = relationship("Marker", back_populates="creator")

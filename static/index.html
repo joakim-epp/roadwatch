@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sv">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Roadwatch</title>
+  <title>Grop</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -171,56 +171,58 @@
 <!-- Auth -->
 <div id="auth">
   <div class="auth-card">
-    <h1>🛣️ Roadwatch</h1>
-    <p>Track potholes on your road</p>
+    <h1>🛣️ Grop</h1>
+    <p>Spåra vägskador på er enskilda väg</p>
     <div class="tabs">
-      <button class="tab active" onclick="showTab('login')">Login</button>
-      <button class="tab" onclick="showTab('register')">Register</button>
+      <button class="tab active" onclick="showTab('login')">Logga in</button>
+      <button class="tab" onclick="showTab('register')">Registrera</button>
     </div>
 
     <div id="login-form">
       <div class="form-group">
-        <label>Username</label>
-        <input id="login-username" type="text" autocomplete="username" placeholder="your username">
+        <label>Användarnamn</label>
+        <input id="login-username" type="text" autocomplete="username" placeholder="ditt användarnamn">
       </div>
       <div class="form-group">
-        <label>Password</label>
+        <label>Lösenord</label>
         <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••">
       </div>
-      <button class="btn" onclick="doLogin()">Login</button>
+      <button class="btn" onclick="doLogin()">Logga in</button>
     </div>
 
     <div id="register-form" style="display:none">
       <div class="form-group">
-        <label>Username</label>
-        <input id="reg-username" type="text" autocomplete="username" placeholder="choose a username">
+        <label>Användarnamn</label>
+        <input id="reg-username" type="text" autocomplete="username" placeholder="välj ett användarnamn">
       </div>
       <div class="form-group">
-        <label>Email</label>
-        <input id="reg-email" type="email" autocomplete="email" placeholder="you@example.com">
+        <label>E-post</label>
+        <input id="reg-email" type="email" autocomplete="email" placeholder="du@exempel.se">
       </div>
       <div class="form-group">
-        <label>Password</label>
+        <label>Lösenord</label>
         <input id="reg-password" type="password" autocomplete="new-password" placeholder="••••••••">
       </div>
-      <button class="btn" onclick="doRegister()">Create account</button>
+      <button class="btn" onclick="doRegister()">Skapa konto</button>
     </div>
 
     <div id="auth-error" class="error-msg"></div>
+    <div id="auth-pending" style="display:none;margin-top:1rem;padding:.875rem;background:#1a2e1a;border-radius:.5rem;color:#86efac;font-size:.875rem;line-height:1.5;text-align:center"></div>
   </div>
 </div>
 
 <!-- App -->
 <div id="app">
   <header>
-    <h1>🛣️ Roadwatch</h1>
+    <h1>🛣️ Grop</h1>
     <div class="header-right">
       <span class="username" id="header-username"></span>
-      <button class="icon-btn" onclick="doLogout()" title="Logout">⏏</button>
+      <button class="icon-btn" id="admin-btn" onclick="openAdmin()" title="Hantera användare" style="display:none">⚙</button>
+      <button class="icon-btn" onclick="doLogout()" title="Logga ut">⏏</button>
     </div>
   </header>
   <div id="map"></div>
-  <button id="fab" onclick="toggleAddMode()" title="Add pothole">＋</button>
+  <button id="fab" onclick="toggleAddMode()" title="Lägg till vägskada">＋</button>
 </div>
 
 <!-- Marker detail panel -->
@@ -236,7 +238,7 @@
     <p class="panel-meta" id="panel-meta"></p>
     <div class="photos-grid" id="panel-photos"></div>
     <div class="upload-btn-wrap">
-      <label class="upload-label" for="photo-input">📷 Add photo</label>
+      <label class="upload-label" for="photo-input">📷 Lägg till foto</label>
       <input id="photo-input" type="file" accept="image/*" onchange="uploadPhoto(event)">
     </div>
     <div class="panel-actions" id="panel-actions"></div>
@@ -245,26 +247,37 @@
 
 <!-- Add marker modal -->
 <div id="add-modal">
-  <h2>📍 New pothole</h2>
+  <h2>📍 Ny vägskada</h2>
   <div class="form-group">
-    <label>Title</label>
-    <input id="add-title" type="text" placeholder="e.g. Large pothole near gate">
+    <label>Titel</label>
+    <input id="add-title" type="text" placeholder="t.ex. Stort hål vid grinden">
   </div>
   <div class="form-group">
-    <label>Description</label>
-    <textarea id="add-desc" placeholder="Any additional details..."></textarea>
+    <label>Beskrivning</label>
+    <textarea id="add-desc" placeholder="Ytterligare detaljer..."></textarea>
   </div>
   <div class="form-group">
-    <label>Severity</label>
+    <label>Allvarlighetsgrad</label>
     <select id="add-severity">
-      <option value="low">Low — minor bump</option>
-      <option value="medium" selected>Medium — noticeable</option>
-      <option value="high">High — dangerous</option>
+      <option value="low">Låg — mindre ojämnhet</option>
+      <option value="medium" selected>Medel — märkbar</option>
+      <option value="high">Hög — farlig</option>
     </select>
   </div>
   <div style="display:flex;gap:.5rem;margin-top:.25rem">
-    <button class="btn secondary" onclick="cancelAdd()" style="flex:1">Cancel</button>
-    <button class="btn" onclick="submitAdd()" style="flex:2">Add marker</button>
+    <button class="btn secondary" onclick="cancelAdd()" style="flex:1">Avbryt</button>
+    <button class="btn" onclick="submitAdd()" style="flex:2">Lägg till</button>
+  </div>
+</div>
+
+<!-- Admin panel -->
+<div id="admin-panel" style="display:none;position:fixed;inset:0;z-index:4000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;">
+  <div style="background:#1e293b;border-radius:1rem;padding:1.5rem;width:100%;max-width:420px;margin:1rem;max-height:80dvh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h2 style="font-size:1.125rem">Väntande godkännanden</h2>
+      <button class="panel-close" onclick="closeAdmin()">×</button>
+    </div>
+    <div id="admin-list"></div>
   </div>
 </div>
 
@@ -276,6 +289,11 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+  const LABELS = {
+    low: 'Låg', medium: 'Medel', high: 'Hög',
+    unfilled: 'Inte igenfylld', filled: 'Igenfylld',
+  };
+
   // ── State ──────────────────────────────────────────────────────────────
   let state = {
     token: localStorage.getItem('rw_token'),
@@ -341,7 +359,13 @@
     const password = document.getElementById('reg-password').value;
     try {
       const data = await api('POST', '/api/users/register', { username, email, password });
-      saveSession(data);
+      if (data.pending) {
+        document.getElementById('auth-pending').textContent = data.message;
+        document.getElementById('auth-pending').style.display = 'block';
+        document.getElementById('auth-error').textContent = '';
+      } else {
+        saveSession(data);
+      }
     } catch (e) {
       document.getElementById('auth-error').textContent = e.message;
     }
@@ -368,8 +392,48 @@
     document.getElementById('auth').style.display = 'none';
     document.getElementById('app').classList.add('visible');
     document.getElementById('header-username').textContent = state.user.username;
+    if (state.user.is_admin) document.getElementById('admin-btn').style.display = '';
     initMap();
     loadMarkers();
+  }
+
+  // ── Admin ──────────────────────────────────────────────────────────────
+  async function openAdmin() {
+    document.getElementById('admin-panel').style.display = 'flex';
+    document.getElementById('admin-list').innerHTML = '<p style="color:#94a3b8;font-size:.875rem">Laddar...</p>';
+    try {
+      const users = await api('GET', '/api/users/pending');
+      document.getElementById('admin-list').innerHTML = users.length === 0
+        ? '<p style="color:#94a3b8;font-size:.875rem">Inga väntande godkännanden.</p>'
+        : users.map(u => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:1px solid #334155">
+            <div>
+              <div style="font-weight:500">${u.username}</div>
+              <div style="font-size:.8125rem;color:#64748b">${u.email}</div>
+            </div>
+            <div style="display:flex;gap:.5rem">
+              <button class="btn" style="width:auto;padding:.375rem .75rem;font-size:.8125rem" onclick="approveUser(${u.id})">Godkänn</button>
+              <button class="btn danger" style="width:auto;padding:.375rem .75rem;font-size:.8125rem" onclick="rejectUser(${u.id})">Neka</button>
+            </div>
+          </div>`).join('');
+    } catch (e) {
+      document.getElementById('admin-list').innerHTML = `<p style="color:#f87171">${e.message}</p>`;
+    }
+  }
+
+  function closeAdmin() {
+    document.getElementById('admin-panel').style.display = 'none';
+  }
+
+  async function approveUser(id) {
+    await api('POST', `/api/users/${id}/approve`);
+    openAdmin();
+  }
+
+  async function rejectUser(id) {
+    if (!confirm('Neka och ta bort denna användare?')) return;
+    await api('DELETE', `/api/users/${id}`);
+    openAdmin();
   }
 
   function initMap() {
@@ -380,14 +444,14 @@
     }).addTo(map);
     layerGroup = L.layerGroup().addTo(map);
 
-    // Center on user location, fallback to Sweden
+    const DEFAULT = [60.48067, 18.42364];
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         pos => map.setView([pos.coords.latitude, pos.coords.longitude], 16),
-        () => map.setView([59.33, 18.07], 10)
+        () => map.setView(DEFAULT, 15)
       );
     } else {
-      map.setView([59.33, 18.07], 10);
+      map.setView(DEFAULT, 15);
     }
 
     map.on('click', onMapClick);
@@ -426,7 +490,7 @@
   function toggleAddMode() {
     state.addMode = !state.addMode;
     document.getElementById('fab').classList.toggle('active', state.addMode);
-    document.getElementById('fab').title = state.addMode ? 'Cancel' : 'Add pothole';
+    document.getElementById('fab').title = state.addMode ? 'Avbryt' : 'Lägg till vägskada';
     map.getContainer().style.cursor = state.addMode ? 'crosshair' : '';
     if (!state.addMode) cancelAdd();
   }
@@ -448,7 +512,7 @@
 
   async function submitAdd() {
     const title = document.getElementById('add-title').value.trim();
-    if (!title) { alert('Please enter a title.'); return; }
+    if (!title) { alert('Ange en titel.'); return; }
     try {
       const m = await api('POST', '/api/markers', {
         lat: state.pendingLatLng.lat,
@@ -485,20 +549,20 @@
     document.getElementById('panel-title').textContent = m.title;
     document.getElementById('panel-desc').textContent = m.description || '';
     document.getElementById('panel-meta').textContent =
-      `Reported ${new Date(m.reported_at).toLocaleDateString()} by ${m.created_by}`;
+      `Rapporterad ${new Date(m.reported_at).toLocaleDateString('sv-SE')} av ${m.created_by}`;
 
     document.getElementById('panel-badges').innerHTML =
-      `<span class="badge ${m.severity}">${m.severity}</span>` +
-      `<span class="badge ${m.status}">${m.status}</span>`;
+      `<span class="badge ${m.severity}">${LABELS[m.severity]}</span>` +
+      `<span class="badge ${m.status}">${LABELS[m.status]}</span>`;
 
     renderPhotos(m);
 
     const canEdit = state.user && (state.user.is_admin || m.created_by_id === state.user.id);
     document.getElementById('panel-actions').innerHTML = canEdit ? `
       <button class="btn secondary" onclick="toggleStatus()">
-        ${m.status === 'unfilled' ? '✓ Mark filled' : '↺ Mark unfilled'}
+        ${m.status === 'unfilled' ? '✓ Markera igenfylld' : '↺ Markera inte igenfylld'}
       </button>
-      <button class="btn danger" onclick="deleteMarker()">Delete</button>
+      <button class="btn danger" onclick="deleteMarker()">Ta bort</button>
     ` : '';
   }
 
@@ -529,7 +593,7 @@
   }
 
   async function deletePhoto(photoId) {
-    if (!confirm('Delete this photo?')) return;
+    if (!confirm('Ta bort detta foto?')) return;
     try {
       await api('DELETE', `/api/markers/${state.selectedId}/photos/${photoId}`);
       const m = state.markers.find(x => x.id === state.selectedId);
@@ -554,7 +618,7 @@
   }
 
   async function deleteMarker() {
-    if (!confirm('Delete this marker?')) return;
+    if (!confirm('Ta bort denna markör?')) return;
     try {
       await api('DELETE', `/api/markers/${state.selectedId}`);
       state.markers = state.markers.filter(x => x.id !== state.selectedId);
