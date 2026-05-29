@@ -3,6 +3,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from .database import Base, engine, get_db
 from .models import Setting
@@ -12,6 +13,17 @@ from .routes import users, markers
 
 os.makedirs("/data/uploads", exist_ok=True)
 Base.metadata.create_all(bind=engine)
+
+# Add columns that create_all won't add to existing tables
+with engine.connect() as _conn:
+    for _stmt in [
+        "ALTER TABLE markers ADD COLUMN filled_at DATETIME",
+    ]:
+        try:
+            _conn.execute(text(_stmt))
+            _conn.commit()
+        except Exception:
+            pass  # column already exists
 
 # Seed default settings
 def seed_settings():

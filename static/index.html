@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="/static/manifest.json">
-  <title>Grop</title>
+  <title>🛣️ Grop</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -143,6 +143,13 @@
 
     /* ── Section label ── */
     .section-label { font-size: .75rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .75rem; }
+
+    /* ── Toast ── */
+    #toast { position: fixed; top: 4.5rem; left: 50%; transform: translateX(-50%); padding: .5rem 1.125rem; border-radius: 2rem; font-size: .875rem; max-width: 88vw; text-align: center; z-index: 9500; pointer-events: none; opacity: 0; transition: opacity .2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toast.show { opacity: 1; }
+    #toast.error { background: rgba(127,29,29,.95); color: #fca5a5; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+    #toast.success { background: rgba(20,83,45,.95); color: #86efac; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+    #toast.info { background: rgba(30,58,95,.95); color: #93c5fd; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
   </style>
 </head>
 <body>
@@ -310,6 +317,8 @@
   <img id="lightbox-img" src="" alt="">
 </div>
 
+<div id="toast"></div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
   const LABELS = { low: 'Låg', medium: 'Medel', high: 'Hög', unfilled: 'Inte igenfylld', filled: 'Igenfylld' };
@@ -327,21 +336,42 @@
 
   let map, layerGroup, settings = {};
 
+  // ── Toast ─────────────────────────────────────────────────────────────
+  function showToast(msg, type = 'error') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = ''; }, 3500);
+  }
+
   // ── API ───────────────────────────────────────────────────────────────
   async function api(method, path, body) {
     const opts = { method, headers: { 'Content-Type': 'application/json', ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}) } };
     if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(path, opts);
+    let res;
+    try { res = await fetch(path, opts); }
+    catch (_) { throw new Error('Kunde inte nå servern — kontrollera anslutningen'); }
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: 'Något gick fel' }));
-      throw new Error(err.detail || 'Något gick fel');
+      const data = await res.json().catch(() => null);
+      if (data?.detail) throw new Error(data.detail);
+      if (res.status === 401) throw new Error('Du är inte inloggad');
+      if (res.status === 403) throw new Error('Åtkomst nekad');
+      if (res.status === 404) throw new Error('Hittades inte');
+      if (res.status >= 500) throw new Error(`Serverfel (${res.status}) — något gick fel på servern`);
+      throw new Error(`Oväntat fel (${res.status})`);
     }
     return res.json();
   }
 
   async function apiUpload(path, formData) {
-    const res = await fetch(path, { method: 'POST', headers: { Authorization: `Bearer ${state.token}` }, body: formData });
-    if (!res.ok) { const err = await res.json().catch(() => ({ detail: 'Uppladdning misslyckades' })); throw new Error(err.detail); }
+    let res;
+    try { res = await fetch(path, { method: 'POST', headers: { Authorization: `Bearer ${state.token}` }, body: formData }); }
+    catch (_) { throw new Error('Kunde inte nå servern'); }
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.detail || 'Uppladdning misslyckades');
+    }
     return res.json();
   }
 
@@ -487,7 +517,7 @@
 
   async function submitAdd() {
     const title = document.getElementById('add-title').value.trim();
-    if (!title) { alert('Ange en titel.'); return; }
+    if (!title) { showToast('Ange en titel.'); return; }
     try {
       const m = await api('POST', '/api/markers', {
         lat: state.pendingLatLng.lat, lng: state.pendingLatLng.lng, title,
@@ -498,7 +528,8 @@
       renderMarkers();
       cancelAdd();
       openPanel(m.id);
-    } catch (e) { alert(e.message); }
+      showToast('Vägskada rapporterad!', 'success');
+    } catch (e) { showToast(e.message); }
   }
 
   // ── Panel ─────────────────────────────────────────────────────────────
@@ -590,7 +621,7 @@
 
   async function saveEdit() {
     const title = document.getElementById('edit-title').value.trim();
-    if (!title) { alert('Ange en titel.'); return; }
+    if (!title) { showToast('Ange en titel.'); return; }
     try {
       const updated = await api('PATCH', `/api/markers/${state.selectedId}`, {
         title,
@@ -603,7 +634,7 @@
       renderMarkers();
       renderPanel();
       loadComments();
-    } catch (e) { alert(e.message); }
+    } catch (e) { showToast(e.message); }
   }
 
   async function toggleStatus() {
@@ -614,7 +645,7 @@
       renderMarkers();
       renderPanel();
       loadComments();
-    } catch (e) { alert(e.message); }
+    } catch (e) { showToast(e.message); }
   }
 
   async function deleteMarker() {
@@ -624,7 +655,7 @@
       state.markers = state.markers.filter(x => x.id !== state.selectedId);
       renderMarkers();
       closePanel();
-    } catch (e) { alert(e.message); }
+    } catch (e) { showToast(e.message); }
   }
 
   async function uploadPhoto(event) {
@@ -638,7 +669,7 @@
       m.photos.push(photo);
       renderPanel();
       loadComments();
-    } catch (e) { alert(e.message); }
+    } catch (e) { showToast(e.message); }
     event.target.value = '';
   }
 
@@ -650,7 +681,7 @@
       m.photos = m.photos.filter(p => p.id !== photoId);
       renderPanel();
       loadComments();
-    } catch (e) { alert(e.message); }
+    } catch (e) { showToast(e.message); }
   }
 
   // ── Comments ──────────────────────────────────────────────────────────
@@ -702,7 +733,7 @@
         </div>`;
         el.querySelector('p')?.remove();
       }
-    } catch (e) { alert(e.message); }
+    } catch (e) { showToast(e.message); }
   }
 
   async function deleteComment(commentId) {
@@ -710,7 +741,7 @@
     try {
       await api('DELETE', `/api/markers/${state.selectedId}/comments/${commentId}`);
       loadComments();
-    } catch (e) { alert(e.message); }
+    } catch (e) { showToast(e.message); }
   }
 
   // ── List view ─────────────────────────────────────────────────────────
@@ -768,11 +799,14 @@
 
   function closeAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
 
-  async function approveUser(id) { await api('POST', `/api/users/${id}/approve`); openAdmin(); }
+  async function approveUser(id) {
+    try { await api('POST', `/api/users/${id}/approve`); openAdmin(); }
+    catch (e) { showToast(e.message); }
+  }
   async function rejectUser(id) {
     if (!confirm('Neka och ta bort denna användare?')) return;
-    await api('DELETE', `/api/users/${id}`);
-    openAdmin();
+    try { await api('DELETE', `/api/users/${id}`); openAdmin(); }
+    catch (e) { showToast(e.message); }
   }
 
   async function saveRoadName() {
@@ -784,8 +818,8 @@
       document.getElementById('auth-subtitle').textContent = `Spåra vägskador på ${value}`;
       document.getElementById('app-title').textContent = `🛣️ ${value}`;
       setTitle(null);
-      alert('Sparat!');
-    } catch (e) { alert(e.message); }
+      showToast('Vägnamn sparat!', 'success');
+    } catch (e) { showToast(e.message); }
   }
 
   function exportCSV() { window.location.href = '/api/markers/export.csv'; }
@@ -804,10 +838,10 @@
   function generateReport() {
     const sv = document.getElementById('print-start').value;
     const ev = document.getElementById('print-end').value;
-    if (!sv || !ev) { alert('Välj ett datumintervall.'); return; }
+    if (!sv || !ev) { showToast('Välj ett datumintervall.'); return; }
     const start = new Date(sv), end = new Date(ev);
     end.setHours(23, 59, 59, 999);
-    if (start > end) { alert('Startdatum måste vara före slutdatum.'); return; }
+    if (start > end) { showToast('Startdatum måste vara före slutdatum.'); return; }
 
     const reported = state.markers.filter(m => { const d = new Date(m.reported_at); return d >= start && d <= end; });
     const filledInRange = state.markers.filter(m => { if (!m.filled_at) return false; const d = new Date(m.filled_at); return d >= start && d <= end; });
@@ -907,7 +941,7 @@ td{font-size:8pt;padding:2pt 4pt;border-bottom:.5pt solid #ddd;vertical-align:mi
   // ── Title ─────────────────────────────────────────────────────────────
   function setTitle(sub) {
     const road = settings.road_name || 'Grop';
-    document.title = sub ? `${sub} · ${road}` : road;
+    document.title = sub ? `📍 ${sub} · ${road}` : `🛣️ ${road}`;
   }
 
   // ── Settings ──────────────────────────────────────────────────────────
