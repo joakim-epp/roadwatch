@@ -35,6 +35,13 @@ class Marker(Base):
     photos = relationship("Photo", back_populates="marker", cascade="all, delete-orphan")
 
 
+class Setting(Base):
+    __tablename__ = "settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(String, nullable=False)
+
+
 class Photo(Base):
     __tablename__ = "photos"
 
