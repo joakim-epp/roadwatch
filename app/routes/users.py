@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
@@ -21,7 +22,7 @@ class LoginBody(BaseModel):
 
 
 def user_dict(user: User) -> dict:
-    return {"id": user.id, "username": user.username, "name": user.name or user.username, "email": user.email, "is_admin": user.is_admin, "is_approved": user.is_approved}
+    return {"id": user.id, "username": user.username, "name": user.name or user.username, "email": user.email, "is_admin": user.is_admin, "is_approved": user.is_approved, "notify_email": user.notify_email or 0}
 
 
 @router.post("/register")
@@ -46,7 +47,7 @@ def register(body: RegisterBody, db: Session = Depends(get_db)):
     db.refresh(user)
 
     if is_first:
-        return {"token": create_token(user.id), "username": user.username, "name": user.name or user.username, "is_admin": user.is_admin}
+        return {"token": create_token(user.id), "username": user.username, "name": user.name or user.username, "is_admin": user.is_admin, "notify_email": user.notify_email or 0}
     return {"pending": True, "message": "Konto skapat — väntar på administratörens godkännande."}
 
 
@@ -57,7 +58,7 @@ def login(body: LoginBody, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     if not user.is_approved:
         raise HTTPException(status_code=403, detail="Your account is awaiting admin approval.")
-    return {"token": create_token(user.id), "username": user.username, "name": user.name or user.username, "is_admin": user.is_admin}
+    return {"token": create_token(user.id), "username": user.username, "name": user.name or user.username, "is_admin": user.is_admin, "notify_email": user.notify_email or 0}
 
 
 @router.get("/me")
@@ -70,6 +71,29 @@ def approved_users(user: User = Depends(get_current_user), db: Session = Depends
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Forbidden")
     return [user_dict(u) for u in db.query(User).filter(User.is_approved == 1).order_by(User.created_at).all()]
+
+
+class UpdateProfileBody(BaseModel):
+    name: Optional[str] = None
+    notify_email: Optional[int] = None
+    old_password: Optional[str] = None
+    new_password: Optional[str] = None
+
+@router.patch("/me")
+def update_me(body: UpdateProfileBody, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if body.name is not None:
+        user.name = body.name.strip() or None
+    if body.notify_email is not None:
+        user.notify_email = body.notify_email
+    if body.new_password:
+        if not body.old_password:
+            raise HTTPException(status_code=400, detail="Ange nuvarande lösenord")
+        if not verify_password(body.old_password, user.password_hash):
+            raise HTTPException(status_code=400, detail="Felaktigt nuvarande lösenord")
+        user.password_hash = hash_password(body.new_password)
+    db.commit()
+    db.refresh(user)
+    return {"username": user.username, "name": user.name or user.username, "is_admin": user.is_admin, "notify_email": user.notify_email or 0}
 
 
 class UpdateUserBody(BaseModel):

@@ -14,6 +14,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     is_admin = Column(Integer, default=0)
     is_approved = Column(Integer, default=0)
+    notify_email = Column(Integer, default=0)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     markers = relationship("Marker", foreign_keys="Marker.created_by", back_populates="creator")
@@ -30,6 +31,8 @@ class Marker(Base):
     severity = Column(String, default="medium")  # low | medium | high
     status = Column(String, default="unfilled")   # unfilled | filled
     reported_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    address = Column(String, nullable=True)
+    updated_at = Column(DateTime, nullable=True)
     filled_at = Column(DateTime, nullable=True)
     filled_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -54,6 +57,7 @@ class Photo(Base):
     marker_id = Column(Integer, ForeignKey("markers.id"), nullable=False)
     filename = Column(String, nullable=False)
     uploaded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    tag = Column(String, nullable=True)
     uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     marker = relationship("Marker", back_populates="photos")

@@ -20,6 +20,10 @@ with engine.connect() as _conn:
         "ALTER TABLE markers ADD COLUMN filled_at DATETIME",
         "ALTER TABLE markers ADD COLUMN filled_by_id INTEGER",
         "ALTER TABLE users ADD COLUMN name VARCHAR",
+        "ALTER TABLE users ADD COLUMN notify_email INTEGER DEFAULT 0",
+        "ALTER TABLE markers ADD COLUMN address VARCHAR",
+        "ALTER TABLE markers ADD COLUMN updated_at DATETIME",
+        "ALTER TABLE photos ADD COLUMN tag VARCHAR",
     ]:
         try:
             _conn.execute(text(_stmt))

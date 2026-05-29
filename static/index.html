@@ -9,6 +9,8 @@
   <link rel="manifest" href="/static/manifest.json">
   <title>🛣️ Grop</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #f1f5f9; height: 100dvh; overflow: hidden; }
@@ -144,6 +146,11 @@
     /* ── Section label ── */
     .section-label { font-size: .75rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .75rem; }
 
+    /* ── Profile sheet ── */
+    .toggle-row { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem; cursor: pointer; }
+    .toggle-row input[type=checkbox] { width: 18px; height: 18px; accent-color: #3b82f6; flex-shrink: 0; }
+    .toggle-label { font-size: .9375rem; color: #cbd5e1; }
+
     /* ── Toast ── */
     #toast { position: fixed; top: 4.5rem; left: 50%; transform: translateX(-50%); padding: .5rem 1.125rem; border-radius: 2rem; font-size: .875rem; max-width: 88vw; text-align: center; z-index: 9500; pointer-events: none; opacity: 0; transition: opacity .2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #toast.show { opacity: 1; }
@@ -204,7 +211,7 @@
     <h1 id="app-title">🛣️ Grop</h1>
     <div class="header-right">
       <span id="header-stats"></span>
-      <span class="username" id="header-username"></span>
+      <button class="username" id="header-username" onclick="openProfile()" title="Min profil" style="cursor:pointer;background:none;border:none;text-align:left;padding:0"></button>
       <button class="icon-btn" id="list-btn" onclick="openList()" title="Lista alla vägskador">☰</button>
       <button class="icon-btn" id="admin-btn" onclick="openAdmin()" title="Hantera användare" style="display:none">⚙</button>
       <button class="icon-btn" onclick="doLogout()" title="Logga ut">⏏</button>
@@ -237,6 +244,36 @@
     <button class="sheet-close" onclick="closeList()">×</button>
   </div>
   <div class="sheet-body" id="list-body"></div>
+</div>
+
+<!-- Profile sheet -->
+<div id="profile-sheet" class="sheet" style="z-index:2500">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title">👤 Min profil</span>
+    <button class="sheet-close" onclick="closeProfile()">×</button>
+  </div>
+  <div class="sheet-body">
+    <p class="section-label">Namn</p>
+    <div class="form-group">
+      <input id="profile-name" type="text" placeholder="Förnamn Efternamn" autocomplete="name">
+    </div>
+    <p class="section-label">Notifikationer</p>
+    <label class="toggle-row">
+      <input id="profile-notify" type="checkbox">
+      <span class="toggle-label">Meddela mig via e-post vid ny vägskada</span>
+    </label>
+    <p class="section-label">Ändra lösenord</p>
+    <div class="form-group">
+      <label>Nuvarande lösenord</label>
+      <input id="profile-old-pw" type="password" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>Nytt lösenord</label>
+      <input id="profile-new-pw" type="password" autocomplete="new-password" placeholder="••••••••">
+    </div>
+    <button class="btn" onclick="saveProfile()">Spara profil</button>
+  </div>
 </div>
 
 <!-- Add marker modal -->
@@ -327,6 +364,7 @@
 <div id="toast"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
   const LABELS = { low: 'Låg', medium: 'Medel', high: 'Hög', unfilled: 'Inte igenfylld', filled: 'Igenfylld' };
 
@@ -417,7 +455,7 @@
 
   function saveSession(data) {
     state.token = data.token;
-    state.user = { username: data.username, name: data.name || data.username, is_admin: data.is_admin };
+    state.user = { username: data.username, name: data.name || data.username, is_admin: data.is_admin, notify_email: data.notify_email || 0 };
     localStorage.setItem('rw_token', data.token);
     localStorage.setItem('rw_user', JSON.stringify(state.user));
     showApp();
@@ -444,7 +482,7 @@
   function initMap() {
     map = L.map('map', { zoomControl: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
-    layerGroup = L.layerGroup().addTo(map);
+    layerGroup = L.markerClusterGroup({ maxClusterRadius: 50, disableClusteringAtZoom: 17 }).addTo(map);
 
     const DEFAULT = [60.48187, 18.42600];
     const BOUNDS = L.latLngBounds([[60.36, 18.18], [60.62, 18.68]]);
@@ -540,6 +578,33 @@
     } catch (e) { showToast(e.message); }
   }
 
+  function timeAgo(iso) {
+    const days = Math.floor((Date.now() - new Date(iso)) / 86400000);
+    if (days === 0) return 'idag';
+    if (days === 1) return 'igår';
+    if (days < 7) return `${days} dagar sedan`;
+    if (days < 30) return `${Math.floor(days / 7)} veckor sedan`;
+    if (days < 365) return `${Math.floor(days / 30)} månader sedan`;
+    return `${Math.floor(days / 365)} år sedan`;
+  }
+
+  function photosHTML(photos, canDelete) {
+    if (!photos.length) return '';
+    const groups = [
+      { label: 'Före', items: photos.filter(p => p.tag === 'before') },
+      { label: 'Efter', items: photos.filter(p => p.tag === 'after') },
+      { label: null, items: photos.filter(p => !p.tag) },
+    ].filter(g => g.items.length);
+    return groups.map(g => `
+      ${g.label ? `<p style="font-size:.75rem;color:#64748b;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin:.5rem 0 .25rem">${g.label}</p>` : ''}
+      <div class="photos-grid">${g.items.map(p => `
+        <div class="photo-wrap">
+          <img class="photo-thumb" src="${p.url}" loading="lazy" onclick="openLightbox('${p.url}')">
+          ${canDelete ? `<button class="photo-delete" onclick="deletePhoto(${p.id})">×</button>` : ''}
+        </div>`).join('')}
+      </div>`).join('');
+  }
+
   // ── Panel ─────────────────────────────────────────────────────────────
   function openPanel(id) {
     state.selectedId = id;
@@ -568,11 +633,6 @@
   function viewHTML(m) {
     const canEdit = state.user && (state.user.is_admin || m.created_by_id === state.user.id);
     const canDeletePhoto = state.user && (state.user.is_admin || m.created_by_id === state.user.id);
-    const photos = m.photos.map(p => `
-      <div class="photo-wrap">
-        <img class="photo-thumb" src="${p.url}" loading="lazy" onclick="openLightbox('${p.url}')">
-        ${canDeletePhoto ? `<button class="photo-delete" onclick="deletePhoto(${p.id})">×</button>` : ''}
-      </div>`).join('');
     const actions = canEdit ? `
       <button class="btn secondary" onclick="toggleStatus()">${m.status === 'unfilled' ? '✓ Markera igenfylld' : '↺ Markera inte igenfylld'}</button>
       <button class="btn secondary" onclick="enterEditMode()">✎ Redigera</button>
@@ -585,9 +645,18 @@
       ${m.description ? `<p class="panel-desc">${m.description}</p>` : ''}
       <p class="panel-meta">Rapporterad ${new Date(m.reported_at).toLocaleDateString('sv-SE')} av ${m.created_by}</p>
       ${m.status === 'filled' && m.filled_by ? `<p class="panel-meta">Igenfylld ${m.filled_at ? new Date(m.filled_at).toLocaleDateString('sv-SE') + ' ' : ''}av ${m.filled_by}</p>` : ''}
-      <div class="photos-grid">${photos}</div>
+      ${m.address ? `<p class="panel-meta">📍 ${m.address}</p>` : ''}
+      ${m.updated_at ? `<p class="panel-meta">Uppdaterad ${timeAgo(m.updated_at)}</p>` : ''}
+      ${photosHTML(m.photos, canDeletePhoto)}
       <div class="upload-btn-wrap">
-        <label class="upload-label" for="photo-input">📷 Lägg till foto</label>
+        <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.375rem">
+          <select id="photo-tag-select" style="flex:1;padding:.375rem .5rem;background:#0f172a;border:1px solid #334155;border-radius:.375rem;color:#94a3b8;font-size:.8125rem">
+            <option value="">Utan märkning</option>
+            <option value="before">Före</option>
+            <option value="after">Efter</option>
+          </select>
+          <label class="upload-label" for="photo-input" style="flex:2;margin:0">📷 Lägg till foto</label>
+        </div>
         <input id="photo-input" type="file" accept="image/*" onchange="uploadPhoto(event)">
       </div>
       <div class="panel-actions">${actions}</div>
@@ -672,6 +741,8 @@
     if (!file || !state.selectedId) return;
     const fd = new FormData();
     fd.append('file', file);
+    const tag = document.getElementById('photo-tag-select')?.value;
+    if (tag) fd.append('tag', tag);
     try {
       const photo = await apiUpload(`/api/markers/${state.selectedId}/photos`, fd);
       const m = state.markers.find(x => x.id === state.selectedId);
@@ -948,7 +1019,7 @@
 
     const cap = maxRows;
     const openRows = allOpen.slice(0, cap).map(m =>
-      `<tr><td>${m.title}</td><td style="width:50pt">${LABELS[m.severity]}</td><td style="width:60pt">${fmt(new Date(m.reported_at))}</td><td style="width:70pt">${m.created_by}</td></tr>`
+      `<tr><td>${m.title}</td><td style="width:45pt;color:#444">${m.address || ''}</td><td style="width:40pt">${LABELS[m.severity]}</td><td style="width:55pt">${fmt(new Date(m.reported_at))}</td><td style="width:60pt">${m.created_by}</td></tr>`
     ).join('');
     const moreNote = allOpen.length > cap ? `<p style="font-size:8pt;color:#666;margin-top:4pt">+ ${allOpen.length - cap} till (visar ${cap} av ${allOpen.length})</p>` : '';
 
@@ -998,7 +1069,7 @@ td{font-size:8pt;padding:2pt 4pt;border-bottom:.5pt solid #ddd;vertical-align:mi
 
 <h2>Öppna vägskador — alla tider (${allOpen.length} st)</h2>
 <table>
-<thead><tr><th>Titel</th><th>Allvarlighet</th><th>Rapporterad</th><th>Namn</th></tr></thead>
+<thead><tr><th>Titel</th><th>Plats</th><th>Allvarlighet</th><th>Rapporterad</th><th>Namn</th></tr></thead>
 <tbody>${openRows}</tbody>
 </table>${moreNote}
 </body></html>`;
@@ -1008,6 +1079,40 @@ td{font-size:8pt;padding:2pt 4pt;border-bottom:.5pt solid #ddd;vertical-align:mi
   function setTitle(sub) {
     const road = settings.road_name || 'Grop';
     document.title = sub ? `📍 ${sub} · ${road}` : `🛣️ ${road}`;
+  }
+
+  // ── Profile ───────────────────────────────────────────────────────────
+  function openProfile() {
+    document.getElementById('profile-name').value = state.user.name || '';
+    document.getElementById('profile-notify').checked = state.user.notify_email === 1;
+    document.getElementById('profile-old-pw').value = '';
+    document.getElementById('profile-new-pw').value = '';
+    document.getElementById('profile-sheet').classList.add('open');
+  }
+
+  function closeProfile() { document.getElementById('profile-sheet').classList.remove('open'); }
+
+  async function saveProfile() {
+    const name = document.getElementById('profile-name').value.trim();
+    const notify_email = document.getElementById('profile-notify').checked ? 1 : 0;
+    const old_password = document.getElementById('profile-old-pw').value;
+    const new_password = document.getElementById('profile-new-pw').value;
+    const body = { name, notify_email };
+    if (old_password || new_password) {
+      if (!old_password) { showToast('Ange nuvarande lösenord.'); return; }
+      if (!new_password) { showToast('Ange nytt lösenord.'); return; }
+      body.old_password = old_password;
+      body.new_password = new_password;
+    }
+    try {
+      const data = await api('PATCH', '/api/users/me', body);
+      state.user.name = data.name;
+      state.user.notify_email = data.notify_email;
+      localStorage.setItem('rw_user', JSON.stringify(state.user));
+      document.getElementById('header-username').textContent = data.name || data.username;
+      showToast('Profil sparad!', 'success');
+      closeProfile();
+    } catch (e) { showToast(e.message); }
   }
 
   // ── Settings ──────────────────────────────────────────────────────────
@@ -1027,7 +1132,7 @@ td{font-size:8pt;padding:2pt 4pt;border-bottom:.5pt solid #ddd;vertical-align:mi
   function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
 
   // ── Keyboard ──────────────────────────────────────────────────────────
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePanel(); closeList(); closeLightbox(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePanel(); closeList(); closeLightbox(); closeProfile(); } });
 
   // ── Boot ──────────────────────────────────────────────────────────────
   loadSettings();

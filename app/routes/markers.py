@@ -5,7 +5,7 @@ import uuid
 import aiofiles
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -13,6 +13,7 @@ from ..database import get_db
 from ..models import Marker, Photo, Comment, User
 from ..auth import get_current_user
 from ..email import send_new_marker_email
+from ..geo import geocode_marker
 
 router = APIRouter(prefix="/api/markers", tags=["markers"])
 
@@ -35,7 +36,9 @@ def marker_dict(m: Marker) -> dict:
         "reported_at": m.reported_at.isoformat(),
         "created_by": m.creator.name or m.creator.username,
         "created_by_id": m.created_by,
-        "photos": [{"id": p.id, "url": f"/uploads/{p.filename}"} for p in m.photos],
+        "address": m.address,
+        "updated_at": m.updated_at.isoformat() if m.updated_at else None,
+        "photos": [{"id": p.id, "url": f"/uploads/{p.filename}", "tag": p.tag} for p in m.photos],
         "filled_at": m.filled_at.isoformat() if m.filled_at else None,
         "filled_by": (m.filler.name or m.filler.username) if m.filler else None,
     }
@@ -101,6 +104,7 @@ def create_marker(
     db.commit()
     db.refresh(m)
     background_tasks.add_task(send_new_marker_email, m.title, user.username)
+    background_tasks.add_task(geocode_marker, m.id, m.lat, m.lng)
     return marker_dict(m)
 
 
@@ -130,6 +134,7 @@ def update_marker(
             m.filled_by_id = None
     for field, value in updates.items():
         setattr(m, field, value)
+    m.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(m)
     return marker_dict(m)
@@ -151,6 +156,7 @@ def delete_marker(marker_id: int, db: Session = Depends(get_db), user: User = De
 async def upload_photo(
     marker_id: int,
     file: UploadFile = File(...),
+    tag: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -161,7 +167,7 @@ async def upload_photo(
     filename = f"{uuid.uuid4()}{ext}"
     async with aiofiles.open(os.path.join(UPLOAD_DIR, filename), "wb") as f:
         await f.write(await file.read())
-    photo = Photo(marker_id=marker_id, filename=filename, uploaded_by=user.id)
+    photo = Photo(marker_id=marker_id, filename=filename, uploaded_by=user.id, tag=tag or None)
     db.add(photo)
     db.commit()
     db.refresh(photo)
