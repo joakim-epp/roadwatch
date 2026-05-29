@@ -584,6 +584,7 @@
       </div>
       ${m.description ? `<p class="panel-desc">${m.description}</p>` : ''}
       <p class="panel-meta">Rapporterad ${new Date(m.reported_at).toLocaleDateString('sv-SE')} av ${m.created_by}</p>
+      ${m.status === 'filled' && m.filled_by ? `<p class="panel-meta">Igenfylld ${m.filled_at ? new Date(m.filled_at).toLocaleDateString('sv-SE') + ' ' : ''}av ${m.filled_by}</p>` : ''}
       <div class="photos-grid">${photos}</div>
       <div class="upload-btn-wrap">
         <label class="upload-label" for="photo-input">📷 Lägg till foto</label>
@@ -975,7 +976,7 @@ td{font-size:8pt;padding:2pt 4pt;border-bottom:.5pt solid #ddd;vertical-align:mi
   <button onclick="window.print()" style="padding:6pt 16pt;font-size:10pt;cursor:pointer;margin-right:8pt">Skriv ut</button>
   <button onclick="window.close()" style="padding:6pt 16pt;font-size:10pt;cursor:pointer">Stäng</button>
 </div>
-<h1>🛣️ ${roadName}</h1>
+<h1>${roadName}</h1>
 <p class="sub">Vägskaderapport &nbsp;·&nbsp; Period: ${fmt(start)} – ${fmt(end)} &nbsp;·&nbsp; Utskriven: ${fmt(new Date())}</p>
 
 <h2>Sammanfattning</h2>
@@ -997,7 +998,7 @@ td{font-size:8pt;padding:2pt 4pt;border-bottom:.5pt solid #ddd;vertical-align:mi
 
 <h2>Öppna vägskador — alla tider (${allOpen.length} st)</h2>
 <table>
-<thead><tr><th>Titel</th><th>Allvarlighet</th><th>Rapporterad</th><th>Av</th></tr></thead>
+<thead><tr><th>Titel</th><th>Allvarlighet</th><th>Rapporterad</th><th>Namn</th></tr></thead>
 <tbody>${openRows}</tbody>
 </table>${moreNote}
 </body></html>`;

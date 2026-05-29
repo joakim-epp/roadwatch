@@ -37,6 +37,7 @@ def marker_dict(m: Marker) -> dict:
         "created_by_id": m.created_by,
         "photos": [{"id": p.id, "url": f"/uploads/{p.filename}"} for p in m.photos],
         "filled_at": m.filled_at.isoformat() if m.filled_at else None,
+        "filled_by": (m.filler.name or m.filler.username) if m.filler else None,
     }
 
 
@@ -123,8 +124,10 @@ def update_marker(
     if "status" in updates:
         if updates["status"] == "filled" and m.status == "unfilled":
             m.filled_at = datetime.now(timezone.utc)
+            m.filled_by_id = user.id
         elif updates["status"] == "unfilled":
             m.filled_at = None
+            m.filled_by_id = None
     for field, value in updates.items():
         setattr(m, field, value)
     db.commit()

@@ -16,7 +16,7 @@ class User(Base):
     is_approved = Column(Integer, default=0)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    markers = relationship("Marker", back_populates="creator")
+    markers = relationship("Marker", foreign_keys="Marker.created_by", back_populates="creator")
 
 
 class Marker(Base):
@@ -31,9 +31,11 @@ class Marker(Base):
     status = Column(String, default="unfilled")   # unfilled | filled
     reported_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     filled_at = Column(DateTime, nullable=True)
+    filled_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
 
-    creator = relationship("User", back_populates="markers")
+    creator = relationship("User", foreign_keys=[created_by], back_populates="markers")
+    filler = relationship("User", foreign_keys=[filled_by_id])
     photos = relationship("Photo", back_populates="marker", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="marker", cascade="all, delete-orphan", order_by="Comment.created_at")
 
