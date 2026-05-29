@@ -814,31 +814,37 @@
   }
 
   function renderAdminUsers(users) {
-    document.getElementById('admin-users').innerHTML = users.length === 0
-      ? '<p style="color:#94a3b8;font-size:.875rem">Inga godkända användare.</p>'
-      : users.map(u => `
-        <div id="urow-${u.id}" style="display:flex;align-items:center;gap:.5rem;padding:.625rem 0;border-bottom:1px solid #334155">
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name || u.username}</div>
-            <div style="font-size:.8125rem;color:#64748b">${u.username}</div>
-          </div>
-          <button class="btn sm secondary" data-uid="${u.id}" data-name="${(u.name||'').replace(/"/g,'&quot;')}" onclick="startEditName(this)">Ändra namn</button>
-        </div>`).join('');
+    const el = document.getElementById('admin-users');
+    if (!users.length) {
+      el.innerHTML = '<p style="color:#94a3b8;font-size:.875rem">Inga godkända användare.</p>';
+      return;
+    }
+    el.innerHTML = users.map(u => `
+      <div id="urow-${u.id}" style="display:flex;align-items:center;gap:.5rem;padding:.625rem 0;border-bottom:1px solid #334155">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name || u.username}</div>
+          <div style="font-size:.8125rem;color:#64748b">${u.username}</div>
+        </div>
+        <button class="btn sm secondary" id="ebtn-${u.id}">Ändra namn</button>
+      </div>`).join('');
+    users.forEach(u => {
+      document.getElementById(`ebtn-${u.id}`).addEventListener('click', () => startEditName(u.id, u.name || ''));
+    });
   }
 
-  function startEditName(btn) {
-    const id = btn.dataset.uid;
-    const currentName = btn.dataset.name;
+  function startEditName(id, currentName) {
     const row = document.getElementById(`urow-${id}`);
     row.innerHTML = `
       <input id="nminput-${id}" type="text" placeholder="Förnamn Efternamn"
-        style="flex:1;padding:.375rem .625rem;background:#0f172a;border:1px solid #3b82f6;border-radius:.375rem;color:#f1f5f9;font-size:.875rem;min-width:0"
-        onkeydown="if(event.key==='Enter')saveUserName(${id});if(event.key==='Escape')openAdmin()">
-      <button class="btn sm" onclick="saveUserName(${id})">Spara</button>
-      <button class="btn sm secondary" onclick="openAdmin()">✕</button>`;
+        style="flex:1;padding:.375rem .625rem;background:#0f172a;border:1px solid #3b82f6;border-radius:.375rem;color:#f1f5f9;font-size:.875rem;min-width:0">
+      <button class="btn sm" id="sbtn-${id}">Spara</button>
+      <button class="btn sm secondary" id="cbtn-${id}">✕</button>`;
     const input = document.getElementById(`nminput-${id}`);
     input.value = currentName;
     input.focus();
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') saveUserName(id); if (e.key === 'Escape') openAdmin(); });
+    document.getElementById(`sbtn-${id}`).addEventListener('click', () => saveUserName(id));
+    document.getElementById(`cbtn-${id}`).addEventListener('click', openAdmin);
   }
 
   async function saveUserName(id) {
