@@ -1,10 +1,15 @@
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import User
+from ..models import User, PasswordReset
 from ..auth import hash_password, verify_password, create_token, get_current_user
+from ..resend_email import send_password_reset
+
+RESET_TTL_HOURS = 1
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -141,5 +146,54 @@ def delete_user(user_id: int, user: User = Depends(get_current_user), db: Sessio
     if not target:
         raise HTTPException(status_code=404, detail="User not found")
     db.delete(target)
+    db.commit()
+    return {"ok": True}
+
+
+# ── Password reset ────────────────────────────────────────────────────────
+
+class ForgotBody(BaseModel):
+    email: EmailStr
+
+
+class ResetBody(BaseModel):
+    token: str
+    password: str
+
+
+@router.post("/forgot-password")
+def forgot_password(body: ForgotBody, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    # Always return success — don't reveal whether the email exists.
+    target = db.query(User).filter(User.email == body.email).first()
+    if target and target.is_approved:
+        token = secrets.token_urlsafe(32)
+        pr = PasswordReset(
+            user_id=target.id,
+            token=token,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=RESET_TTL_HOURS),
+        )
+        db.add(pr)
+        db.commit()
+        background_tasks.add_task(send_password_reset, target.email, target.name or target.username, token)
+    return {"ok": True}
+
+
+@router.post("/reset-password")
+def reset_password(body: ResetBody, db: Session = Depends(get_db)):
+    if len(body.password) < 6:
+        raise HTTPException(status_code=400, detail="Lösenordet måste vara minst 6 tecken")
+    pr = db.query(PasswordReset).filter(PasswordReset.token == body.token).first()
+    now = datetime.now(timezone.utc)
+    if not pr or pr.used_at is not None:
+        raise HTTPException(status_code=400, detail="Ogiltig eller använd länk")
+    # expires_at may be naive (SQLite stores without tz); treat as UTC
+    expires = pr.expires_at if pr.expires_at.tzinfo else pr.expires_at.replace(tzinfo=timezone.utc)
+    if expires < now:
+        raise HTTPException(status_code=400, detail="Länken har gått ut")
+    user = db.get(User, pr.user_id)
+    if not user:
+        raise HTTPException(status_code=400, detail="Användaren hittades inte")
+    user.password_hash = hash_password(body.password)
+    pr.used_at = now
     db.commit()
     return {"ok": True}

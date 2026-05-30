@@ -230,6 +230,32 @@
         <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••">
       </div>
       <button class="btn" onclick="doLogin()">Logga in</button>
+      <p style="text-align:center;margin-top:1rem;font-size:.8125rem">
+        <a href="#" onclick="showForgot();return false" style="color:#3b82f6;text-decoration:none">Glömt lösenord?</a>
+      </p>
+    </div>
+    <div id="forgot-form" style="display:none">
+      <p style="color:#94a3b8;font-size:.875rem;margin-bottom:1rem">Ange din e-postadress så skickar vi en återställningslänk.</p>
+      <div class="form-group">
+        <label>E-post</label>
+        <input id="forgot-email" type="email" autocomplete="email" placeholder="du@exempel.se">
+      </div>
+      <button class="btn" onclick="doForgot()">Skicka länk</button>
+      <p style="text-align:center;margin-top:1rem;font-size:.8125rem">
+        <a href="#" onclick="showTab('login');return false" style="color:#3b82f6;text-decoration:none">← Tillbaka till inloggning</a>
+      </p>
+    </div>
+    <div id="reset-form" style="display:none">
+      <p style="color:#94a3b8;font-size:.875rem;margin-bottom:1rem">Välj ett nytt lösenord.</p>
+      <div class="form-group">
+        <label>Nytt lösenord</label>
+        <input id="reset-new-pw" type="password" autocomplete="new-password" placeholder="minst 6 tecken">
+      </div>
+      <div class="form-group">
+        <label>Bekräfta lösenord</label>
+        <input id="reset-confirm-pw" type="password" autocomplete="new-password" placeholder="••••••••">
+      </div>
+      <button class="btn" onclick="doReset()">Spara nytt lösenord</button>
     </div>
     <div id="register-form" style="display:none">
       <div class="form-group">
@@ -543,7 +569,57 @@
     document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === (tab === 'login' ? 0 : 1)));
     document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
     document.getElementById('register-form').style.display = tab === 'register' ? '' : 'none';
+    document.getElementById('forgot-form').style.display = 'none';
+    document.getElementById('reset-form').style.display = 'none';
+    document.getElementById('auth-pending').style.display = 'none';
     document.getElementById('auth-error').textContent = '';
+  }
+
+  function showForgot() {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('forgot-form').style.display = '';
+    document.getElementById('auth-error').textContent = '';
+    document.getElementById('auth-pending').style.display = 'none';
+  }
+
+  function showReset() {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('forgot-form').style.display = 'none';
+    document.getElementById('reset-form').style.display = '';
+    document.getElementById('auth-error').textContent = '';
+    document.getElementById('auth-pending').style.display = 'none';
+  }
+
+  async function doForgot() {
+    const email = document.getElementById('forgot-email').value.trim();
+    if (!email) { document.getElementById('auth-error').textContent = 'Ange din e-postadress'; return; }
+    try {
+      await api('POST', '/api/users/forgot-password', { email });
+      document.getElementById('auth-error').textContent = '';
+      const p = document.getElementById('auth-pending');
+      p.textContent = 'Om kontot finns har vi skickat en återställningslänk till din e-post. Kontrollera även skräpposten.';
+      p.style.display = 'block';
+    } catch (e) { document.getElementById('auth-error').textContent = e.message; }
+  }
+
+  async function doReset() {
+    const token = new URLSearchParams(location.search).get('token');
+    const pw = document.getElementById('reset-new-pw').value;
+    const confirm = document.getElementById('reset-confirm-pw').value;
+    if (!pw || pw.length < 6) { document.getElementById('auth-error').textContent = 'Lösenordet måste vara minst 6 tecken'; return; }
+    if (pw !== confirm) { document.getElementById('auth-error').textContent = 'Lösenorden matchar inte'; return; }
+    try {
+      await api('POST', '/api/users/reset-password', { token, password: pw });
+      document.getElementById('auth-error').textContent = '';
+      const p = document.getElementById('auth-pending');
+      p.innerHTML = 'Lösenordet är ändrat! <a href="/" style="color:#fff;text-decoration:underline">Logga in</a>';
+      p.style.display = 'block';
+      document.getElementById('reset-form').style.display = 'none';
+    } catch (e) { document.getElementById('auth-error').textContent = e.message; }
   }
 
   async function doLogin() {
@@ -1711,8 +1787,10 @@ td{font-size:8pt;padding:2pt 4pt;border-bottom:.5pt solid #ddd;vertical-align:mi
   }
 
   // ── Boot ──────────────────────────────────────────────────────────────
+  const IS_RESET = location.pathname.startsWith('/reset') && new URLSearchParams(location.search).get('token');
   loadSettings();
-  if (IS_PUBLIC) showApp();
+  if (IS_RESET) showReset();
+  else if (IS_PUBLIC) showApp();
   else if (state.token && state.user) showApp();
 </script>
 </body>

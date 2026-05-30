@@ -6,3 +6,4 @@ bcrypt
 python-multipart
 aiofiles
 email-validator
+resend

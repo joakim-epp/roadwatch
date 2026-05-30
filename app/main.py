@@ -97,6 +97,11 @@ def public_root():
     return FileResponse("/app/static/index.html")
 
 
+@app.get("/reset")
+def reset_root():
+    return FileResponse("/app/static/index.html")
+
+
 @app.get("/sw.js")
 def service_worker():
     return FileResponse("/app/static/sw.js", media_type="application/javascript")
