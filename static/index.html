@@ -157,6 +157,56 @@
     #toast.error { background: rgba(127,29,29,.95); color: #fca5a5; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
     #toast.success { background: rgba(20,83,45,.95); color: #86efac; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
     #toast.info { background: rgba(30,58,95,.95); color: #93c5fd; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+
+    /* ── Category badge ── */
+    .cat-badge { display: inline-flex; align-items: center; gap: .3rem; padding: .25rem .5rem; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+
+    /* ── Confirm button ── */
+    .confirm-btn { display: inline-flex; align-items: center; gap: .375rem; padding: .5rem .875rem; border-radius: .5rem; border: 1px solid #334155; background: #0f172a; color: #cbd5e1; cursor: pointer; font-size: .875rem; font-weight: 500; transition: .15s; }
+    .confirm-btn:hover { border-color: #3b82f6; color: #93c5fd; }
+    .confirm-btn.confirmed { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+    .confirm-count { background: #334155; color: #cbd5e1; padding: 0 .375rem; border-radius: 999px; font-size: .75rem; min-width: 1.25rem; text-align: center; }
+
+    /* ── History ── */
+    .history-item { padding: .5rem 0; border-bottom: 1px solid #1e293b; font-size: .8125rem; color: #cbd5e1; }
+    .history-item:last-child { border-bottom: none; }
+    .history-meta { color: #64748b; font-size: .75rem; margin-top: .125rem; }
+    .history-change { color: #94a3b8; }
+    .history-old { color: #f87171; text-decoration: line-through; }
+    .history-new { color: #86efac; }
+
+    /* ── Activity feed ── */
+    .activity-item { padding: .625rem 0; border-bottom: 1px solid #334155; cursor: pointer; }
+    .activity-item:hover { background: rgba(255,255,255,.02); }
+    .activity-line { font-size: .9375rem; color: #cbd5e1; line-height: 1.35; }
+    .activity-line strong { color: #f1f5f9; font-weight: 600; }
+    .activity-meta { font-size: .75rem; color: #64748b; margin-top: .25rem; }
+    .activity-quote { color: #94a3b8; font-style: italic; margin-top: .25rem; font-size: .875rem; }
+
+    /* ── Filter sheet (advanced filter chips) ── */
+    .chip-group { display: flex; gap: .375rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .chip { padding: .375rem .75rem; border: 1px solid #334155; background: #0f172a; color: #94a3b8; border-radius: 999px; font-size: .8125rem; cursor: pointer; font-weight: 500; }
+    .chip.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+    .chip-icon { margin-right: .25rem; }
+
+    /* ── Map mode toggle ── */
+    #map-mode { position: fixed; top: 4rem; right: 1rem; z-index: 999; display: flex; flex-direction: column; gap: .375rem; }
+    .mode-btn { padding: .5rem; border: none; border-radius: .5rem; background: rgba(15,23,42,.85); color: #94a3b8; cursor: pointer; backdrop-filter: blur(6px); border: 1px solid #334155; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+    .mode-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+
+    /* ── Public banner ── */
+    #public-banner { background: #1e3a5f; color: #93c5fd; padding: .5rem 1rem; font-size: .8125rem; text-align: center; }
+    #public-banner a { color: #fff; text-decoration: underline; font-weight: 600; }
+
+    /* ── Category management ── */
+    .cat-row { display: flex; align-items: center; gap: .5rem; padding: .5rem 0; border-bottom: 1px solid #334155; }
+    .cat-row input.cat-icon { width: 2.5rem; text-align: center; }
+    .cat-row input.cat-name { flex: 1; min-width: 0; }
+    .cat-row input.cat-color { width: 2.5rem; padding: 0; height: 2rem; border: 1px solid #334155; background: #0f172a; border-radius: .375rem; cursor: pointer; }
+
+    /* ── Sync badge (offline outbox) ── */
+    #sync-badge { display: none; align-items: center; gap: .25rem; padding: .25rem .5rem; border-radius: 999px; background: #7c2d12; color: #fdba74; font-size: .75rem; font-weight: 500; }
+    #sync-badge.show { display: inline-flex; }
   </style>
 </head>
 <body>
@@ -210,14 +260,21 @@
   <header>
     <h1 id="app-title">🛣️ Grop</h1>
     <div class="header-right">
+      <span id="sync-badge" title="Köade ändringar väntar på synk"><span>⟳</span><span id="sync-count">0</span></span>
       <span id="header-stats"></span>
       <button class="username" id="header-username" onclick="openProfile()" title="Min profil" style="cursor:pointer;background:none;border:none;text-align:left;padding:0"></button>
+      <button class="icon-btn" id="activity-btn" onclick="openActivity()" title="Aktivitet">📰</button>
       <button class="icon-btn" id="list-btn" onclick="openList()" title="Lista alla vägskador">☰</button>
+      <button class="icon-btn" id="filter-btn" onclick="openFilter()" title="Filter">🔍</button>
       <button class="icon-btn" id="admin-btn" onclick="openAdmin()" title="Hantera användare" style="display:none">⚙</button>
       <button class="icon-btn" onclick="doLogout()" title="Logga ut">⏏</button>
     </div>
   </header>
   <div id="map"></div>
+  <div id="map-mode">
+    <button class="mode-btn active" data-mode="pins" onclick="setMapMode('pins')" title="Pinnar">📍</button>
+    <button class="mode-btn" data-mode="heatmap" onclick="setMapMode('heatmap')" title="Värmekarta">🔥</button>
+  </div>
   <div id="filter-bar">
     <button class="filter-btn active" onclick="setFilter('all')">Alla</button>
     <button class="filter-btn" onclick="setFilter('unfilled')">Öppna</button>
@@ -284,6 +341,10 @@
     <input id="add-title" type="text" placeholder="t.ex. Stort hål vid grinden">
   </div>
   <div class="form-group">
+    <label>Kategori</label>
+    <select id="add-category"></select>
+  </div>
+  <div class="form-group">
     <label>Beskrivning</label>
     <textarea id="add-desc" placeholder="Ytterligare detaljer..."></textarea>
   </div>
@@ -305,6 +366,36 @@
   </div>
 </div>
 
+<!-- Filter sheet -->
+<div id="filter-sheet" class="sheet" style="z-index:2500">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title">🔍 Filtrera</span>
+    <button class="sheet-close" onclick="closeFilter()">×</button>
+  </div>
+  <div class="sheet-body">
+    <p class="section-label">Status</p>
+    <div class="chip-group" id="filter-status-chips"></div>
+    <p class="section-label">Allvarlighetsgrad</p>
+    <div class="chip-group" id="filter-severity-chips"></div>
+    <p class="section-label">Kategori</p>
+    <div class="chip-group" id="filter-category-chips"></div>
+    <p class="section-label">Sortering</p>
+    <div class="chip-group" id="filter-sort-chips"></div>
+    <button class="btn secondary" onclick="resetFilters()" style="margin-top:.5rem">Återställ filter</button>
+  </div>
+</div>
+
+<!-- Activity feed sheet -->
+<div id="activity-sheet" class="sheet" style="z-index:2500">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title">📰 Aktivitet</span>
+    <button class="sheet-close" onclick="closeActivity()">×</button>
+  </div>
+  <div class="sheet-body" id="activity-body"></div>
+</div>
+
 <!-- Admin panel -->
 <div id="admin-panel">
   <div class="admin-card">
@@ -324,6 +415,23 @@
     <div style="display:flex;gap:.5rem;margin-bottom:1.5rem">
       <button class="btn secondary" onclick="exportCSV()">⬇ CSV</button>
       <button class="btn secondary" onclick="openPrintModal()">🖨 Skriv ut rapport</button>
+    </div>
+
+    <p class="section-label">🏷️ Kategorier</p>
+    <div id="admin-categories" style="margin-bottom:.5rem"></div>
+    <div class="cat-row" style="border-bottom:none">
+      <input class="cat-icon" id="newcat-icon" type="text" placeholder="📍" maxlength="4">
+      <input class="cat-name" id="newcat-name" type="text" placeholder="Ny kategori">
+      <input class="cat-color" id="newcat-color" type="color" value="#3b82f6">
+      <button class="btn sm" onclick="addCategory()">＋</button>
+    </div>
+    <p style="font-size:.75rem;color:#64748b;margin:.5rem 0 1.5rem">Att ta bort en kategori avmarkerar den från befintliga vägskador (de raderas inte).</p>
+
+    <p class="section-label">🌍 Offentligt läge</p>
+    <p style="font-size:.75rem;color:#64748b;margin-bottom:.5rem">Dela denna länk för att visa kartan utan inloggning. Användarnamn döljs.</p>
+    <div style="display:flex;gap:.5rem;margin-bottom:1.5rem">
+      <input id="public-url" type="text" readonly style="flex:1;font-size:.8125rem">
+      <button class="btn sm" onclick="copyPublicUrl()">Kopiera</button>
     </div>
 
     <p class="section-label">👥 Väntande godkännanden</p>
@@ -369,21 +477,27 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
   const LABELS = { low: 'Låg', medium: 'Medel', high: 'Hög', unfilled: 'Inte igenfylld', filled: 'Igenfylld' };
+  const FIELD_LABEL = { status: 'status', severity: 'allvarlighetsgrad', category: 'kategori' };
+  const IS_PUBLIC = location.pathname.startsWith('/public');
 
   let state = {
     token: localStorage.getItem('rw_token'),
     user: JSON.parse(localStorage.getItem('rw_user') || 'null'),
     markers: [],
+    categories: [],
     addMode: false,
     pendingLatLng: null,
     selectedId: null,
     editMode: false,
-    filter: 'all',
+    filter: 'all',                           // legacy quick filter: all|unfilled|filled
+    advFilter: { severity: null, category_id: null, sort: 'reported_desc' },
+    mapMode: 'pins',                          // pins | heatmap
   };
 
-  let map, layerGroup, settings = {};
+  let map, layerGroup, heatLayer, settings = {};
 
   // ── Toast ─────────────────────────────────────────────────────────────
   function showToast(msg, type = 'error') {
@@ -475,10 +589,26 @@
   function showApp() {
     document.getElementById('auth').style.display = 'none';
     document.getElementById('app').classList.add('visible');
-    document.getElementById('header-username').textContent = state.user.name || state.user.username;
-    if (state.user.is_admin) document.getElementById('admin-btn').style.display = '';
+    if (IS_PUBLIC) {
+      document.getElementById('header-username').style.display = 'none';
+      document.getElementById('admin-btn').style.display = 'none';
+      document.getElementById('fab').style.display = 'none';
+      document.querySelectorAll('header .icon-btn').forEach(b => {
+        if (!['list-btn', 'filter-btn', 'activity-btn'].includes(b.id)) b.style.display = 'none';
+      });
+      const banner = document.createElement('div');
+      banner.id = 'public-banner';
+      banner.innerHTML = `Du tittar i offentligt läge. <a href="/">Logga in</a> för att rapportera vägskador.`;
+      document.getElementById('app').insertBefore(banner, document.querySelector('header').nextSibling);
+    } else {
+      document.getElementById('header-username').textContent = state.user.name || state.user.username;
+      if (state.user.is_admin) document.getElementById('admin-btn').style.display = '';
+    }
     initMap();
+    loadCategories();
     loadMarkers();
+    renderFilterChips();
+    setupOfflineSync();
     setTimeout(() => map && map.invalidateSize(), 100);
   }
 
@@ -514,16 +644,65 @@
 
   // ── Markers ───────────────────────────────────────────────────────────
   async function loadMarkers() {
-    try { state.markers = await api('GET', '/api/markers'); renderMarkers(); } catch (e) { console.error(e); }
+    try {
+      const path = IS_PUBLIC ? '/api/public/markers' : buildMarkersUrl();
+      const fresh = await api('GET', path);
+      state.markers = fresh;
+      cacheMarkers(fresh);
+      renderMarkers();
+    } catch (e) {
+      // offline fallback: try cache
+      const cached = await loadCachedMarkers();
+      if (cached) {
+        state.markers = cached;
+        renderMarkers();
+        showToast('Visar cachelagrade vägskador (offline)', 'info');
+      } else {
+        console.error(e);
+      }
+    }
+  }
+
+  function buildMarkersUrl() {
+    const params = new URLSearchParams();
+    if (state.filter !== 'all') params.set('status', state.filter);
+    if (state.advFilter.severity) params.set('severity', state.advFilter.severity);
+    if (state.advFilter.category_id !== null) params.set('category_id', state.advFilter.category_id);
+    if (state.advFilter.sort !== 'reported_desc') params.set('sort', state.advFilter.sort);
+    const qs = params.toString();
+    return '/api/markers' + (qs ? `?${qs}` : '');
+  }
+
+  function visibleMarkers() {
+    let arr = state.markers;
+    if (state.filter !== 'all') arr = arr.filter(m => m.status === state.filter);
+    if (state.advFilter.severity) arr = arr.filter(m => m.severity === state.advFilter.severity);
+    if (state.advFilter.category_id !== null) {
+      const cid = state.advFilter.category_id;
+      arr = arr.filter(m => cid === 0 ? !m.category : (m.category && m.category.id === cid));
+    }
+    return arr;
   }
 
   function renderMarkers() {
     layerGroup.clearLayers();
-    const visible = state.filter === 'all' ? state.markers : state.markers.filter(m => m.status === state.filter);
-    visible.forEach(m => {
-      L.marker([m.lat, m.lng], { icon: markerIcon(m.severity, m.status) }).addTo(layerGroup).on('click', () => openPanel(m.id));
-    });
+    if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+    const visible = visibleMarkers();
+    if (state.mapMode === 'heatmap') {
+      const pts = visible.map(m => [m.lat, m.lng, m.severity === 'high' ? 1 : m.severity === 'medium' ? 0.6 : 0.3]);
+      heatLayer = L.heatLayer(pts, { radius: 28, blur: 22, maxZoom: 17, max: 1.0 }).addTo(map);
+    } else {
+      visible.forEach(m => {
+        L.marker([m.lat, m.lng], { icon: markerIcon(m.severity, m.status) }).addTo(layerGroup).on('click', () => openPanel(m.id));
+      });
+    }
     updateStats();
+  }
+
+  function setMapMode(mode) {
+    state.mapMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    renderMarkers();
   }
 
   function updateStats() {
@@ -535,10 +714,76 @@
   // ── Filter ────────────────────────────────────────────────────────────
   function setFilter(f) {
     state.filter = f;
-    document.querySelectorAll('.filter-btn').forEach((btn, i) => {
+    document.querySelectorAll('#filter-bar .filter-btn').forEach((btn, i) => {
       btn.classList.toggle('active', ['all', 'unfilled', 'filled'][i] === f);
     });
     renderMarkers();
+    renderFilterChips();
+  }
+
+  function openFilter() { renderFilterChips(); document.getElementById('filter-sheet').classList.add('open'); }
+  function closeFilter() { document.getElementById('filter-sheet').classList.remove('open'); }
+
+  function renderFilterChips() {
+    const status = document.getElementById('filter-status-chips');
+    const sev = document.getElementById('filter-severity-chips');
+    const cat = document.getElementById('filter-category-chips');
+    const sort = document.getElementById('filter-sort-chips');
+    if (!status) return;
+
+    const chip = (active, label, onclick) =>
+      `<button class="chip ${active ? 'active' : ''}" onclick="${onclick}">${label}</button>`;
+
+    status.innerHTML = [
+      ['all', 'Alla'], ['unfilled', 'Öppna'], ['filled', 'Igenfyllda'],
+    ].map(([v, l]) => chip(state.filter === v, l, `setFilter('${v}')`)).join('');
+
+    sev.innerHTML = [
+      [null, 'Alla'], ['high', 'Hög'], ['medium', 'Medel'], ['low', 'Låg'],
+    ].map(([v, l]) => chip(state.advFilter.severity === v, l, `setAdvFilter('severity', ${v === null ? 'null' : `'${v}'`})`)).join('');
+
+    cat.innerHTML = chip(state.advFilter.category_id === null, 'Alla', `setAdvFilter('category_id', null)`)
+      + chip(state.advFilter.category_id === 0, 'Utan kategori', `setAdvFilter('category_id', 0)`)
+      + state.categories.map(c =>
+          chip(state.advFilter.category_id === c.id, `<span class="chip-icon">${c.icon}</span>${c.name}`, `setAdvFilter('category_id', ${c.id})`)
+        ).join('');
+
+    sort.innerHTML = [
+      ['reported_desc', 'Nyast först'], ['reported_asc', 'Äldst först'], ['severity', 'Allvarligast först'],
+    ].map(([v, l]) => chip(state.advFilter.sort === v, l, `setAdvFilter('sort', '${v}')`)).join('');
+  }
+
+  function setAdvFilter(key, value) {
+    state.advFilter[key] = value;
+    renderFilterChips();
+    loadMarkers();
+  }
+
+  function resetFilters() {
+    state.filter = 'all';
+    state.advFilter = { severity: null, category_id: null, sort: 'reported_desc' };
+    document.querySelectorAll('#filter-bar .filter-btn').forEach((btn, i) => {
+      btn.classList.toggle('active', i === 0);
+    });
+    renderFilterChips();
+    loadMarkers();
+  }
+
+  // ── Categories ────────────────────────────────────────────────────────
+  async function loadCategories() {
+    try {
+      const path = IS_PUBLIC ? '/api/public/categories' : '/api/categories';
+      state.categories = await api('GET', path);
+      renderAddCategoryOptions();
+      renderFilterChips();
+    } catch (_) { /* ok if offline */ }
+  }
+
+  function renderAddCategoryOptions() {
+    const sel = document.getElementById('add-category');
+    if (!sel) return;
+    sel.innerHTML = `<option value="">(ingen kategori)</option>` +
+      state.categories.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
   }
 
   // ── Add mode ──────────────────────────────────────────────────────────
@@ -569,19 +814,32 @@
   async function submitAdd() {
     const title = document.getElementById('add-title').value.trim();
     if (!title) { showToast('Ange en titel.'); return; }
+    const catVal = document.getElementById('add-category').value;
+    const payload = {
+      lat: state.pendingLatLng.lat, lng: state.pendingLatLng.lng, title,
+      description: document.getElementById('add-desc').value.trim(),
+      severity: document.getElementById('add-severity').value,
+      address: document.getElementById('add-address').value.trim(),
+      category_id: catVal ? parseInt(catVal, 10) : null,
+    };
     try {
-      const m = await api('POST', '/api/markers', {
-        lat: state.pendingLatLng.lat, lng: state.pendingLatLng.lng, title,
-        description: document.getElementById('add-desc').value.trim(),
-        severity: document.getElementById('add-severity').value,
-        address: document.getElementById('add-address').value.trim(),
-      });
+      const m = await api('POST', '/api/markers', payload);
       state.markers.push(m);
       renderMarkers();
       cancelAdd();
       openPanel(m.id);
       showToast('Vägskada rapporterad!', 'success');
-    } catch (e) { showToast(e.message); }
+    } catch (e) {
+      // offline: queue the marker for later
+      if (e.message.includes('Kunde inte nå')) {
+        await queueMarker(payload);
+        cancelAdd();
+        showToast('Sparad lokalt — synkar när du är online', 'info');
+        renderSyncBadge();
+      } else {
+        showToast(e.message);
+      }
+    }
   }
 
   function timeAgo(iso) {
@@ -617,9 +875,57 @@
     state.editMode = false;
     renderPanel();
     document.getElementById('panel').classList.add('open');
-    loadComments();
+    if (!IS_PUBLIC) {
+      loadComments();
+      loadHistory();
+    }
     const m = state.markers.find(x => x.id === id);
     if (m) setTitle(m.title);
+  }
+
+  // ── Confirm/upvote ────────────────────────────────────────────────────
+  async function toggleConfirm() {
+    if (!state.selectedId) return;
+    const m = state.markers.find(x => x.id === state.selectedId);
+    try {
+      const method = m.has_confirmed ? 'DELETE' : 'POST';
+      const res = await api(method, `/api/markers/${state.selectedId}/confirm`);
+      m.has_confirmed = res.has_confirmed;
+      m.confirmation_count = res.confirmation_count;
+      renderPanel();
+      if (!IS_PUBLIC) { loadComments(); loadHistory(); }
+    } catch (e) { showToast(e.message); }
+  }
+
+  // ── History (audit log) ───────────────────────────────────────────────
+  async function loadHistory() {
+    if (!state.selectedId || state.editMode) return;
+    try {
+      const events = await api('GET', `/api/markers/${state.selectedId}/events`);
+      renderHistory(events);
+    } catch (_) {}
+  }
+
+  function renderHistory(events) {
+    const el = document.getElementById('history-list');
+    if (!el) return;
+    if (events.length === 0) { el.innerHTML = '<p style="color:#64748b;font-size:.875rem">Inga ändringar ännu.</p>'; return; }
+    el.innerHTML = events.map(e => {
+      const fieldLabel = FIELD_LABEL[e.field] || e.field;
+      const fmtVal = (v, field) => {
+        if (v === null || v === undefined) return '∅';
+        if (field === 'status') return LABELS[v] || v;
+        if (field === 'severity') return LABELS[v] || v;
+        return v;
+      };
+      return `<div class="history-item">
+        <span class="history-change">${e.user} ändrade ${fieldLabel}:</span>
+        <span class="history-old">${fmtVal(e.old_value, e.field)}</span>
+        →
+        <span class="history-new">${fmtVal(e.new_value, e.field)}</span>
+        <div class="history-meta">${new Date(e.created_at).toLocaleString('sv-SE')}</div>
+      </div>`;
+    }).join('');
   }
 
   function closePanel() {
@@ -637,23 +943,32 @@
   }
 
   function viewHTML(m) {
-    const canEdit = state.user && (state.user.is_admin || m.created_by_id === state.user.id);
-    const canDeletePhoto = state.user && (state.user.is_admin || m.created_by_id === state.user.id);
+    const isPublic = IS_PUBLIC;
+    const canEdit = !isPublic && state.user && (state.user.is_admin || m.created_by_id === state.user.id);
+    const canDeletePhoto = !isPublic && state.user && (state.user.is_admin || m.created_by_id === state.user.id);
     const actions = canEdit ? `
       <button class="btn secondary" onclick="toggleStatus()">${m.status === 'unfilled' ? '✓ Markera igenfylld' : '↺ Markera inte igenfylld'}</button>
       <button class="btn secondary" onclick="enterEditMode()">✎ Redigera</button>
       <button class="btn danger" onclick="deleteMarker()">Ta bort</button>` : '';
-    return `
-      <div class="badges">
-        <span class="badge ${m.severity}">${LABELS[m.severity]}</span>
-        <span class="badge ${m.status}">${LABELS[m.status]}</span>
-      </div>
-      ${m.description ? `<p class="panel-desc">${m.description}</p>` : ''}
-      <p class="panel-meta">Rapporterad ${new Date(m.reported_at).toLocaleDateString('sv-SE')} av ${m.created_by}</p>
-      ${m.status === 'filled' && m.filled_by ? `<p class="panel-meta">Igenfylld ${m.filled_at ? new Date(m.filled_at).toLocaleDateString('sv-SE') + ' ' : ''}av ${m.filled_by}</p>` : ''}
-      ${m.address ? `<p class="panel-meta">📍 ${m.address}</p>` : ''}
-      ${m.updated_at ? `<p class="panel-meta">Uppdaterad ${timeAgo(m.updated_at)}</p>` : ''}
-      ${photosHTML(m.photos, canDeletePhoto)}
+    const cat = m.category;
+    const catBadge = cat ? `<span class="cat-badge" style="background:${cat.color}22;color:${cat.color}">${cat.icon} ${cat.name}</span>` : '';
+    const confirmBtn = isPublic ? '' : `
+      <button class="confirm-btn ${m.has_confirmed ? 'confirmed' : ''}" onclick="toggleConfirm()">
+        <span>${m.has_confirmed ? '✓' : '👍'}</span>
+        <span>${m.has_confirmed ? 'Bekräftad' : 'Bekräfta'}</span>
+        <span class="confirm-count">${m.confirmation_count}</span>
+      </button>`;
+    const publicConfirm = isPublic && m.confirmation_count
+      ? `<span style="font-size:.8125rem;color:#94a3b8;margin-left:.5rem">👍 ${m.confirmation_count} bekräftelser</span>` : '';
+    const reportedLine = isPublic
+      ? `<p class="panel-meta">Rapporterad ${new Date(m.reported_at).toLocaleDateString('sv-SE')}</p>`
+      : `<p class="panel-meta">Rapporterad ${new Date(m.reported_at).toLocaleDateString('sv-SE')} av ${m.created_by}</p>`;
+    const filledLine = m.status === 'filled' && m.filled_at
+      ? (isPublic
+          ? `<p class="panel-meta">Igenfylld ${new Date(m.filled_at).toLocaleDateString('sv-SE')}</p>`
+          : (m.filled_by ? `<p class="panel-meta">Igenfylld ${new Date(m.filled_at).toLocaleDateString('sv-SE')} av ${m.filled_by}</p>` : ''))
+      : '';
+    const photoUpload = isPublic ? '' : `
       <div class="upload-btn-wrap">
         <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.375rem">
           <select id="photo-tag-select" style="flex:1;padding:.375rem .5rem;background:#0f172a;border:1px solid #334155;border-radius:.375rem;color:#94a3b8;font-size:.8125rem">
@@ -664,8 +979,8 @@
           <label class="upload-label" for="photo-input" style="flex:2;margin:0">📷 Lägg till foto</label>
         </div>
         <input id="photo-input" type="file" accept="image/*" onchange="uploadPhoto(event)">
-      </div>
-      <div class="panel-actions">${actions}</div>
+      </div>`;
+    const commentsSection = isPublic ? '' : `
       <div class="comments-section">
         <p class="comments-label">💬 Kommentarer</p>
         <div id="comments-list"><p style="color:#64748b;font-size:.875rem">Laddar...</p></div>
@@ -674,13 +989,44 @@
           <button class="btn" onclick="submitComment()">Skicka</button>
         </div>
       </div>`;
+    const historySection = isPublic ? '' : `
+      <div class="comments-section">
+        <p class="comments-label">🕓 Historik</p>
+        <div id="history-list"><p style="color:#64748b;font-size:.875rem">Laddar...</p></div>
+      </div>`;
+    return `
+      <div class="badges">
+        <span class="badge ${m.severity}">${LABELS[m.severity]}</span>
+        <span class="badge ${m.status}">${LABELS[m.status]}</span>
+        ${catBadge}
+      </div>
+      <div style="margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+        ${confirmBtn}${publicConfirm}
+      </div>
+      ${m.description ? `<p class="panel-desc">${m.description}</p>` : ''}
+      ${reportedLine}
+      ${filledLine}
+      ${m.address ? `<p class="panel-meta">📍 ${m.address}</p>` : ''}
+      ${m.updated_at ? `<p class="panel-meta">Uppdaterad ${timeAgo(m.updated_at)}</p>` : ''}
+      ${photosHTML(m.photos, canDeletePhoto)}
+      ${photoUpload}
+      <div class="panel-actions">${actions}</div>
+      ${commentsSection}
+      ${historySection}`;
   }
 
   function editHTML(m) {
+    const currentCat = m.category ? m.category.id : '';
+    const catOptions = `<option value="">(ingen kategori)</option>` +
+      state.categories.map(c => `<option value="${c.id}" ${c.id === currentCat ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('');
     return `
       <div class="form-group">
         <label>Titel</label>
         <input id="edit-title" type="text" value="${m.title.replace(/"/g, '&quot;')}">
+      </div>
+      <div class="form-group">
+        <label>Kategori</label>
+        <select id="edit-category">${catOptions}</select>
       </div>
       <div class="form-group">
         <label>Beskrivning</label>
@@ -705,17 +1051,19 @@
   }
 
   function enterEditMode() { state.editMode = true; renderPanel(); }
-  function exitEditMode() { state.editMode = false; renderPanel(); loadComments(); }
+  function exitEditMode() { state.editMode = false; renderPanel(); loadComments(); loadHistory(); }
 
   async function saveEdit() {
     const title = document.getElementById('edit-title').value.trim();
     if (!title) { showToast('Ange en titel.'); return; }
+    const catVal = document.getElementById('edit-category').value;
     try {
       const updated = await api('PATCH', `/api/markers/${state.selectedId}`, {
         title,
         description: document.getElementById('edit-desc').value.trim(),
         severity: document.getElementById('edit-severity').value,
         address: document.getElementById('edit-address').value.trim() || null,
+        category_id: catVal ? parseInt(catVal, 10) : null,
       });
       const idx = state.markers.findIndex(x => x.id === state.selectedId);
       state.markers[idx] = updated;
@@ -723,6 +1071,7 @@
       renderMarkers();
       renderPanel();
       loadComments();
+      loadHistory();
     } catch (e) { showToast(e.message); }
   }
 
@@ -734,6 +1083,7 @@
       renderMarkers();
       renderPanel();
       loadComments();
+      loadHistory();
     } catch (e) { showToast(e.message); }
   }
 
@@ -837,22 +1187,26 @@
 
   // ── List view ─────────────────────────────────────────────────────────
   function openList() {
-    const sorted = [...state.markers].sort((a, b) => {
+    const sorted = [...visibleMarkers()].sort((a, b) => {
       const sev = { high: 0, medium: 1, low: 2 };
       return (sev[a.severity] - sev[b.severity]) || new Date(b.reported_at) - new Date(a.reported_at);
     });
-    const visible = state.filter === 'all' ? sorted : sorted.filter(m => m.status === state.filter);
-    document.getElementById('list-body').innerHTML = visible.length === 0
+    document.getElementById('list-body').innerHTML = sorted.length === 0
       ? '<p style="color:#94a3b8;font-size:.875rem">Inga vägskador att visa.</p>'
-      : visible.map(m => `
+      : sorted.map(m => {
+          const catIcon = m.category ? `<span title="${m.category.name}">${m.category.icon}</span>` : '';
+          const reporter = IS_PUBLIC ? '' : ` · ${m.created_by}`;
+          const conf = m.confirmation_count ? ` · 👍 ${m.confirmation_count}` : '';
+          return `
         <div class="list-item" onclick="goToMarker(${m.id})">
           <div class="list-dot ${m.severity} ${m.status === 'filled' ? 'filled' : ''}"></div>
           <div class="list-item-info">
-            <div class="list-item-title">${m.title}</div>
-            <div class="list-item-meta">${new Date(m.reported_at).toLocaleDateString('sv-SE')} · ${m.created_by}</div>
+            <div class="list-item-title">${catIcon} ${m.title}</div>
+            <div class="list-item-meta">${new Date(m.reported_at).toLocaleDateString('sv-SE')}${reporter}${conf}</div>
           </div>
           <span class="badge ${m.status} list-item-badge" style="font-size:.7rem">${LABELS[m.status]}</span>
-        </div>`).join('');
+        </div>`;
+        }).join('');
     document.getElementById('list-panel').classList.add('open');
   }
 
@@ -869,8 +1223,10 @@
   async function openAdmin() {
     document.getElementById('admin-panel').style.display = 'flex';
     document.getElementById('road-name-input').value = settings.road_name || '';
+    document.getElementById('public-url').value = `${location.origin}/public`;
     document.getElementById('admin-list').innerHTML = '<p style="color:#94a3b8;font-size:.875rem">Laddar...</p>';
     document.getElementById('admin-users').innerHTML = '<p style="color:#94a3b8;font-size:.875rem">Laddar...</p>';
+    renderAdminCategories();
     try {
       const [pending, approved] = await Promise.all([
         api('GET', '/api/users/pending'),
@@ -1129,7 +1485,8 @@ td{font-size:8pt;padding:2pt 4pt;border-bottom:.5pt solid #ddd;vertical-align:mi
   // ── Settings ──────────────────────────────────────────────────────────
   async function loadSettings() {
     try {
-      settings = await api('GET', '/api/settings');
+      const path = IS_PUBLIC ? '/api/public/settings' : '/api/settings';
+      settings = await api('GET', path);
       if (settings.road_name) {
         document.getElementById('auth-subtitle').textContent = `Spåra vägskador på ${settings.road_name}`;
         document.getElementById('app-title').textContent = `🛣️ ${settings.road_name}`;
@@ -1138,16 +1495,225 @@ td{font-size:8pt;padding:2pt 4pt;border-bottom:.5pt solid #ddd;vertical-align:mi
     } catch (_) {}
   }
 
+  // ── Activity feed ─────────────────────────────────────────────────────
+  async function openActivity() {
+    document.getElementById('activity-sheet').classList.add('open');
+    document.getElementById('activity-body').innerHTML = '<p style="color:#94a3b8;font-size:.875rem">Laddar...</p>';
+    try {
+      const items = await api('GET', '/api/activity');
+      renderActivity(items);
+    } catch (e) {
+      document.getElementById('activity-body').innerHTML = `<p style="color:#f87171">${e.message}</p>`;
+    }
+  }
+
+  function closeActivity() { document.getElementById('activity-sheet').classList.remove('open'); }
+
+  function renderActivity(items) {
+    if (items.length === 0) {
+      document.getElementById('activity-body').innerHTML = '<p style="color:#94a3b8;font-size:.875rem">Ingen aktivitet ännu.</p>';
+      return;
+    }
+    document.getElementById('activity-body').innerHTML = items.map(it => {
+      let line;
+      if (it.kind === 'marker_created') {
+        line = `<strong>${it.user}</strong> rapporterade <strong>${it.marker_title}</strong>`;
+      } else if (it.kind === 'comment') {
+        line = `<strong>${it.user}</strong> kommenterade på <strong>${it.marker_title}</strong>`;
+      } else if (it.kind === 'marker_status_changed') {
+        line = `<strong>${it.user}</strong> ändrade status på <strong>${it.marker_title}</strong> till <em>${LABELS[it.new_value] || it.new_value}</em>`;
+      } else if (it.kind === 'marker_severity_changed') {
+        line = `<strong>${it.user}</strong> ändrade allvarlighetsgrad på <strong>${it.marker_title}</strong> till <em>${LABELS[it.new_value] || it.new_value}</em>`;
+      } else if (it.kind === 'marker_category_changed') {
+        line = `<strong>${it.user}</strong> ändrade kategori på <strong>${it.marker_title}</strong>${it.new_value ? ` till <em>${it.new_value}</em>` : ''}`;
+      } else {
+        line = it.kind;
+      }
+      const quote = it.kind === 'comment' && it.text ? `<div class="activity-quote">"${it.text}"</div>` : '';
+      return `<div class="activity-item" onclick="closeActivity();goToMarker(${it.marker_id})">
+        <div class="activity-line">${line}</div>
+        ${quote}
+        <div class="activity-meta">${timeAgo(it.at)} · ${new Date(it.at).toLocaleDateString('sv-SE')}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Admin: categories ─────────────────────────────────────────────────
+  async function renderAdminCategories() {
+    const el = document.getElementById('admin-categories');
+    if (!el) return;
+    el.innerHTML = state.categories.map(c => `
+      <div class="cat-row" id="cat-row-${c.id}">
+        <input class="cat-icon" type="text" value="${c.icon}" maxlength="4" onchange="updateCategoryField(${c.id}, 'icon', this.value)">
+        <input class="cat-name" type="text" value="${c.name}" onchange="updateCategoryField(${c.id}, 'name', this.value)">
+        <input class="cat-color" type="color" value="${c.color}" onchange="updateCategoryField(${c.id}, 'color', this.value)">
+        <button class="btn sm danger" onclick="deleteCategory(${c.id})">×</button>
+      </div>`).join('');
+  }
+
+  async function updateCategoryField(id, field, value) {
+    try {
+      await api('PATCH', `/api/categories/${id}`, { [field]: value });
+      await loadCategories();
+      renderAdminCategories();
+    } catch (e) { showToast(e.message); }
+  }
+
+  async function addCategory() {
+    const name = document.getElementById('newcat-name').value.trim();
+    if (!name) { showToast('Ange ett namn.'); return; }
+    const icon = document.getElementById('newcat-icon').value.trim() || '📍';
+    const color = document.getElementById('newcat-color').value;
+    try {
+      await api('POST', '/api/categories', { name, icon, color });
+      document.getElementById('newcat-name').value = '';
+      document.getElementById('newcat-icon').value = '';
+      await loadCategories();
+      renderAdminCategories();
+      loadMarkers();
+      showToast('Kategori tillagd!', 'success');
+    } catch (e) { showToast(e.message); }
+  }
+
+  async function deleteCategory(id) {
+    if (!confirm('Ta bort kategori? Vägskador i kategorin behålls men blir okategoriserade.')) return;
+    try {
+      await api('DELETE', `/api/categories/${id}`);
+      await loadCategories();
+      renderAdminCategories();
+      loadMarkers();
+    } catch (e) { showToast(e.message); }
+  }
+
+  function copyPublicUrl() {
+    const url = `${location.origin}/public`;
+    navigator.clipboard?.writeText(url).then(
+      () => showToast('Länk kopierad!', 'success'),
+      () => showToast('Kunde inte kopiera')
+    );
+  }
+
+  // ── Offline / sync ────────────────────────────────────────────────────
+  const DB_NAME = 'roadwatch', DB_VER = 1;
+  function openIDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VER);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('markers')) db.createObjectStore('markers', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'id', autoIncrement: true });
+        if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta');
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function cacheMarkers(markers) {
+    try {
+      const db = await openIDB();
+      const tx = db.transaction('markers', 'readwrite');
+      tx.objectStore('markers').clear();
+      markers.forEach(m => tx.objectStore('markers').put(m));
+      await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    } catch (_) {}
+  }
+
+  async function loadCachedMarkers() {
+    try {
+      const db = await openIDB();
+      return await new Promise((res, rej) => {
+        const r = db.transaction('markers').objectStore('markers').getAll();
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+    } catch (_) { return null; }
+  }
+
+  async function queueMarker(payload) {
+    const db = await openIDB();
+    const tx = db.transaction('outbox', 'readwrite');
+    tx.objectStore('outbox').add({ payload, queued_at: new Date().toISOString() });
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+  }
+
+  async function getOutbox() {
+    try {
+      const db = await openIDB();
+      return await new Promise((res, rej) => {
+        const r = db.transaction('outbox').objectStore('outbox').getAll();
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+    } catch (_) { return []; }
+  }
+
+  async function removeOutboxItem(id) {
+    const db = await openIDB();
+    const tx = db.transaction('outbox', 'readwrite');
+    tx.objectStore('outbox').delete(id);
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+  }
+
+  async function renderSyncBadge() {
+    const outbox = await getOutbox();
+    const badge = document.getElementById('sync-badge');
+    if (!badge) return;
+    if (outbox.length > 0) {
+      badge.classList.add('show');
+      document.getElementById('sync-count').textContent = outbox.length;
+    } else {
+      badge.classList.remove('show');
+    }
+  }
+
+  async function syncOutbox() {
+    if (!navigator.onLine || IS_PUBLIC || !state.token) return;
+    const outbox = await getOutbox();
+    if (outbox.length === 0) return;
+    let sent = 0;
+    for (const item of outbox) {
+      try {
+        const m = await api('POST', '/api/markers', item.payload);
+        await removeOutboxItem(item.id);
+        state.markers.push(m);
+        sent++;
+      } catch (_) { break; }
+    }
+    if (sent > 0) {
+      renderMarkers();
+      renderSyncBadge();
+      showToast(`Synkade ${sent} köade ändring${sent === 1 ? '' : 'ar'}`, 'success');
+    }
+  }
+
+  function setupOfflineSync() {
+    renderSyncBadge();
+    window.addEventListener('online', () => { syncOutbox(); loadMarkers(); });
+    syncOutbox();
+  }
+
   // ── Lightbox ──────────────────────────────────────────────────────────
   function openLightbox(url) { document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').classList.add('open'); }
   function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
 
   // ── Keyboard ──────────────────────────────────────────────────────────
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePanel(); closeList(); closeLightbox(); closeProfile(); } });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closePanel(); closeList(); closeLightbox(); closeProfile();
+      closeFilter(); closeActivity();
+    }
+  });
+
+  // ── Service worker ────────────────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
 
   // ── Boot ──────────────────────────────────────────────────────────────
   loadSettings();
-  if (state.token && state.user) showApp();
+  if (IS_PUBLIC) showApp();
+  else if (state.token && state.user) showApp();
 </script>
 </body>
 </html>
